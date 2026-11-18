@@ -53,6 +53,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[]): boolean {
+  return Object.keys(value).every((key) => allowed.includes(key));
+}
+
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -72,7 +76,8 @@ function validateCandles(value: unknown): value is Candle[] {
   return value.every((row) => {
     if (!isRecord(row)) return false;
     const { t, o, h, l, c } = row;
-    return isFiniteNumber(t) && isFiniteNumber(o) && isFiniteNumber(h) && isFiniteNumber(l) && isFiniteNumber(c)
+    return hasOnlyKeys(row, ["t", "o", "h", "l", "c", "v"])
+      && isFiniteNumber(t) && isFiniteNumber(o) && isFiniteNumber(h) && isFiniteNumber(l) && isFiniteNumber(c)
       && l <= o && l <= c && h >= o && h >= c
       && (row.v === undefined || (isFiniteNumber(row.v) && row.v >= 0));
   });
@@ -85,6 +90,7 @@ function sameJson(a: unknown, b: unknown): boolean {
 function validateScoreEvents(value: unknown): value is ScoreEvent[] {
   return Array.isArray(value) && value.every((item) =>
     isRecord(item)
+    && hasOnlyKeys(item, ["tick", "score", "combo", "candlesPassed"])
     && isSafeInt(item.tick) && item.tick >= 0
     && isSafeInt(item.score) && item.score >= 0
     && isSafeInt(item.combo) && item.combo >= 0
@@ -195,14 +201,19 @@ function validateTrace(raw: unknown): { trace?: RunProofTrace; issues: RunProofI
     return { issues: [{ code: "invalid_shape", message: "Trace must be a JSON object." }] };
   }
 
+  if (!hasOnlyKeys(raw, ["format", "prototype", "recorder", "seed", "terrain", "mutationId", "ticks", "inputs", "claims"])) {
+    issues.push({ code: "invalid_shape", message: "Trace contains properties not defined by the runproof/v1 schema." });
+  }
+
   if (raw.format !== TRACE_FORMAT || raw.prototype !== true) {
     issues.push({ code: "format_mismatch", message: `Expected ${TRACE_FORMAT} with prototype=true.` });
   }
-  if (!isRecord(raw.seed) || !isDateString(raw.seed.date)
+  if (!isRecord(raw.seed) || !hasOnlyKeys(raw.seed, ["date", "symbol"]) || !isDateString(raw.seed.date)
       || typeof raw.seed.symbol !== "string" || !/^[A-Za-z0-9._-]{1,24}$/.test(raw.seed.symbol)) {
     issues.push({ code: "invalid_seed", message: "Seed must contain a real YYYY-MM-DD date and a short symbol identifier." });
   }
-  if (!isRecord(raw.terrain) || typeof raw.terrain.kind !== "string" || raw.terrain.kind.length < 1 || !validateCandles(raw.terrain.candles)) {
+  if (!isRecord(raw.terrain) || !hasOnlyKeys(raw.terrain, ["kind", "candles"])
+      || typeof raw.terrain.kind !== "string" || raw.terrain.kind.length < 1 || !validateCandles(raw.terrain.candles)) {
     issues.push({ code: "invalid_terrain", message: `Terrain must include 1–${MAX_CANDLES} valid OHLC candle records.` });
   }
   if (typeof raw.mutationId !== "string" || raw.mutationId.length < 1) {
@@ -217,7 +228,7 @@ function validateTrace(raw: unknown): { trace?: RunProofTrace; issues: RunProofI
       || (raw.recorder.id !== RECORDER_ID && raw.recorder.id !== RIVAL_QA_RECORDER_ID)
       || raw.recorder.version !== 1
       || raw.recorder.tickHz !== FIXED_TICK_HZ
-      || Object.keys(raw.recorder).some((key) => !["format", "id", "version", "tickHz"].includes(key)))) {
+      || !hasOnlyKeys(raw.recorder, ["format", "id", "version", "tickHz"]))) {
     issues.push({ code: "invalid_recorder", message: "Recorder metadata must use a supported cc-fixed-tick-input/v1 ID, version 1, at 60 Hz." });
   }
 
@@ -226,7 +237,8 @@ function validateTrace(raw: unknown): { trace?: RunProofTrace; issues: RunProofI
   } else {
     let previousTick = -1;
     raw.inputs.forEach((item, index) => {
-      if (!isRecord(item) || !isSafeInt(item.tick) || item.tick < 0 || !isSafeInt(raw.ticks) || item.tick >= raw.ticks
+      if (!isRecord(item) || !hasOnlyKeys(item, ["tick", "action"])
+          || !isSafeInt(item.tick) || item.tick < 0 || !isSafeInt(raw.ticks) || item.tick >= raw.ticks
           || typeof item.action !== "string" || !ALLOWED_ACTIONS.has(item.action as InputAction)) {
         issues.push({ code: "invalid_input_event", message: `Input event ${index} has an invalid tick or action.` });
         return;
@@ -238,7 +250,8 @@ function validateTrace(raw: unknown): { trace?: RunProofTrace; issues: RunProofI
 
   const validCause = isRecord(raw.claims)
     && (raw.claims.deathCause === null || (typeof raw.claims.deathCause === "string" && DEATH_CAUSES.has(raw.claims.deathCause as DeathCause)));
-  if (!isRecord(raw.claims) || !isSafeInt(raw.claims.score) || raw.claims.score < 0
+  if (!isRecord(raw.claims) || !hasOnlyKeys(raw.claims, ["score", "candlesPassed", "bestStreak", "deathCause", "jumpTicks", "landTicks", "scoreEvents"])
+      || !isSafeInt(raw.claims.score) || raw.claims.score < 0
       || !isSafeInt(raw.claims.candlesPassed) || raw.claims.candlesPassed < 0
       || !isSafeInt(raw.claims.bestStreak) || raw.claims.bestStreak < 0
       || !validCause

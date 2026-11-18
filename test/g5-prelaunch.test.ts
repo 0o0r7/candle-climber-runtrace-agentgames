@@ -216,12 +216,16 @@ describe("G5: verifier outage never advances the grace clock (129-c #3)", () => 
       };
       const r1 = await verifyPartner(entry as never, {
         wickPrice: Promise.resolve({ ok: false, error: "feed-unavailable" }) as never,
+        ethCall: async () => null,
+        cache: new Map(),
       });
       expect(r1.meets).toBeNull(); // UNVERIFIABLE — not a definitive miss
       expect(r1.belowSince).toBeNull(); // the grace clock did NOT start
       // second check after 8 simulated days must still not delist on outage alone
       const r2 = await verifyPartner(entry as never, {
         wickPrice: Promise.resolve({ ok: false, error: "feed-unavailable" }) as never,
+        ethCall: async () => null,
+        cache: new Map(),
         now: Date.now() + 8 * 86_400_000,
       });
       expect(r2.meets).toBeNull();

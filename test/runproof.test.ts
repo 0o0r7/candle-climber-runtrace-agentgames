@@ -115,6 +115,32 @@ describe("RunProof replay verifier", () => {
     expect(report.issues.some((issue) => issue.code === "invalid_recorder")).toBe(true);
   });
 
+  test("rejects extra properties forbidden by the runproof/v1 JSON schema", () => {
+    const trace = traceFor([], 10);
+    const invalidTraces: Array<[unknown, string]> = [
+      [{ ...structuredClone(trace), unexpected: true }, "invalid_shape"],
+      [{ ...structuredClone(trace), seed: { ...trace.seed, unexpected: true } }, "invalid_seed"],
+      [{ ...structuredClone(trace), terrain: { ...trace.terrain, unexpected: true } }, "invalid_terrain"],
+      [{
+        ...structuredClone(trace),
+        terrain: { ...trace.terrain, candles: trace.terrain.candles.map((row, index) => index === 0 ? { ...row, unexpected: true } : row) },
+      }, "invalid_terrain"],
+      [{ ...structuredClone(trace), recorder: { ...trace.recorder, unexpected: true } }, "invalid_recorder"],
+      [{ ...structuredClone(trace), inputs: [{ tick: 0, action: "jump-down", unexpected: true }] }, "invalid_input_event"],
+      [{ ...structuredClone(trace), claims: { ...trace.claims, unexpected: true } }, "invalid_claims"],
+      [{
+        ...structuredClone(trace),
+        claims: { ...trace.claims, scoreEvents: [{ tick: 0, score: 0, combo: 0, candlesPassed: 0, unexpected: true }] },
+      }, "invalid_claims"],
+    ];
+
+    for (const [candidate, issueCode] of invalidTraces) {
+      const report = verifyTrace(candidate);
+      expect(report.decision).toBe("FLAG");
+      expect(report.issues.some((issue) => issue.code === issueCode)).toBe(true);
+    }
+  });
+
   test("flags a pre-summit world transition as an impossible action", () => {
     const trace = traceFor([{ tick: 0, action: "enter-world2" }], 120);
     const report = verifyTrace(trace);
