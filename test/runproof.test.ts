@@ -3,6 +3,7 @@ import { dailyMutation } from "@/game/cc/mutations";
 import { DEMO_SEED, DEMO_TERRAIN_KIND, makeDemoCandles } from "@/game/runproof/demo-data";
 import { readCappedJsonBody, RunProofRequestGuard } from "@/game/runproof/http-guard";
 import { FixedTickInputRecorder } from "@/game/runproof/recorder";
+import { createRunTraceReportBundle, parseRunTraceJson, RUNTRACE_REPORT_BUNDLE_FORMAT } from "@/game/runproof/trace-io";
 import { deriveClaims, verifyTrace } from "@/game/runproof/verify";
 import { clientIp } from "@/lib/http-limiter";
 import {
@@ -56,6 +57,27 @@ describe("fixed-tick input recorder", () => {
       { tick: 0, action: "rush-down" },
       { tick: 1, action: "jump-up" },
     ]);
+  });
+});
+
+describe("RunTrace file exchange", () => {
+  test("imports only bounded JSON objects and reports useful parse errors", () => {
+    expect(parseRunTraceJson('{"format":"runproof/v1"}')).toEqual({ format: "runproof/v1" });
+    expect(() => parseRunTraceJson("not json")).toThrow("Trace file is not valid JSON.");
+    expect(() => parseRunTraceJson("[]")).toThrow("Trace file must contain a JSON object.");
+    expect(() => parseRunTraceJson(`{"payload":"${"x".repeat(2_000_000)}"}`)).toThrow("exceeds the 2,000,000 byte limit");
+  });
+
+  test("creates a review bundle that keeps the input and deterministic report together", () => {
+    const trace = traceFor([], 10);
+    const report = verifyTrace(trace);
+    expect(createRunTraceReportBundle(trace, report)).toEqual({
+      format: RUNTRACE_REPORT_BUNDLE_FORMAT,
+      trace,
+      report,
+    });
+    const imported = parseRunTraceJson(JSON.stringify(createRunTraceReportBundle(trace, report)));
+    expect(imported).toEqual(JSON.parse(JSON.stringify(trace)) as Record<string, unknown>);
   });
 });
 

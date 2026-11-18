@@ -1,10 +1,10 @@
-# RunTrace — deterministic replay-consistency check
+# RunTrace — local deterministic QA workbench
 
-**No cryptographic proof.** RunTrace makes gameplay runs reproducible for game testing: it captures inputs at fixed simulation ticks and replays them against this branch's Candle Climber engine. Its verifier is deterministic TypeScript, not an LLM. The local autonomous QA mode separately uses the existing deterministic RivalBot planner to generate seed/profile runs, capture its inputs, replay them, and check bounded state invariants. It is not cryptographic proof, anti-cheat, or identity verification.
+**No cryptographic proof.** RunTrace makes gameplay runs reproducible for game testing: it captures inputs at fixed simulation ticks, accepts exported JSON traces for replay checks, and packages the input with its deterministic report for review. Its verifier is deterministic TypeScript, not an LLM. The local autonomous QA mode separately uses the existing deterministic RivalBot planner to generate seed/profile runs, capture its inputs, replay them, and check bounded state invariants. It is not cryptographic proof, anti-cheat, or identity verification.
 
-This is a local-only prototype on the isolated `agentgames/runproof` branch. The clone intentionally has no Git remote. Its existing `/runproof` and `/api/runproof/verify` paths remain internal; the regular `/play` route and production checkout are untouched.
+This local-only workbench build is carried on the private `web3-assistant/runtrace-sandbox-product-2026-11-19` branch, based on `agentgames/runproof`. It has not been deployed. Its `/runproof` and `/api/runproof/verify` paths remain internal; the regular `/play` route and production checkout are untouched.
 
-## Try the local demo
+## Run the local workbench
 
 Requires the repository's existing Bun runtime:
 
@@ -13,9 +13,9 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-Open `http://localhost:3000/runproof`. One-click cases demonstrate a valid trace, an altered score claim, and an impossible world transition; the panel shows the decision, reason, and evidence. You can also play a short run with Space / ↑ / W or tap-and-hold to jump, and Shift for RUSH. Afterward, replay-check locally or download the trace. The demo does not persist traces.
+Open `http://localhost:3000/runproof`. Start a short playtest run with Space / ↑ / W or tap-and-hold to jump, and Shift for RUSH; touch screens also have hold-to-jump and hold-for-RUSH controls. Afterward, replay-check locally and download the trace. Import a previously saved `runproof/v1` trace or review bundle (up to 2 MB) to check it against this branch's engine. When a bundle is imported, its embedded trace is replayed again and its prior report is discarded. Download a `runtrace/report-bundle/v1` JSON file to keep the input trace beside its report. Imported traces are sent to the same-origin verifier and are not persisted by this route. Test vectors for valid input, altered score claims, and impossible world transitions remain available for policy checks.
 
-The recorder captures input at the 60 Hz engine-step boundary, not from browser frame timestamps. The fixture is synthetic, fictional, and editable. Terrain provenance and input origin are not authenticated.
+The recorder captures input at the 60 Hz engine-step boundary, not from browser frame timestamps. The fixture is synthetic, fictional, and editable. Terrain provenance and input origin are not authenticated; imported files and review bundles are editable too.
 
 ## Autonomous local QA agent
 
@@ -31,11 +31,11 @@ The policy checks trace shape/bounds, mutation selection, and engine replay agai
 
 ## Agent Games adapter status
 
-A separate composable handler factory locally prototypes the general documented raw-body signature flow, signed responses, preflight response, task-ID idempotency, streamed request-size enforcement, and bounded concurrency/rate controls. Khushi's Wildcard-specific Discord support answer says HMAC and preflight are for Gatekeeper/Steal, not Wildcard; it also says a public HTTPS point is optional here. The published general Rules/build wording remains broader, so the distinction is recorded in [the local Agent Games readiness note](docs/runproof/agentgames-protocol.md). No Wildcard envelope or task-ID contract has been supplied, and the local adapter's test envelope is only a fabricated fixture.
+A separate composable handler factory locally prototypes the general documented raw-body signature flow, signed responses, preflight response, task-ID idempotency, streamed request-size enforcement, and bounded concurrency/rate controls. Khushi's Wildcard-specific Discord support answer says HMAC and preflight are for Gatekeeper/Steal, not Wildcard; it also says a public HTTPS point is optional here. The published Wildcard event page asks for a public agent link and lists an HTTPS endpoint “as requested in the submission form.” This endpoint requirement conflicts with the support clarification and remains unresolved. The distinction is recorded in [the local Agent Games readiness note](docs/runproof/agentgames-protocol.md). No Wildcard envelope or task-ID contract has been supplied, and the local adapter's test envelope is only a fabricated fixture.
 
 The published general Rules/build material does not specify the HMAC algorithm or signature-header encoding. The generic prototype therefore uses an injected signature-provider interface; its test-only signer is not claimed to match the platform and is not wired into production. No registration secret is stored, no endpoint is mounted for contest registration, and no platform preflight has been run. Per the Wildcard-specific support answer, these HMAC/preflight gaps are not blockers for Wildcard.
 
-This local prototype is **not** submission-ready: it has no public repository/demo/write-up link, and the published Wildcard page asks for a public agent link. The clone includes a deterministic, rule-based autonomous RivalBot QA agent; the official Rules define an agent as a program and do not require an LLM. No Wildcard envelope has been supplied, so actual task-protocol integration is unvalidated. The event page lists a public HTTPS endpoint, while Discord support says one is optional here; this work remains local-only and will not publish or deploy an endpoint. Do not call it LLM- or zk-powered.
+RunTrace is **not** submission-ready: it has no public repository/demo/write-up link, and the published Wildcard page asks for a public agent link. The clone includes a deterministic, rule-based autonomous RivalBot QA agent; the official Rules define an agent as a program and do not require an LLM. No Wildcard envelope has been supplied, so actual task-protocol integration is unvalidated. This remains a Wildcard-oriented local product; it does not satisfy all four tracks. Creator needs separate public content and is judged on technical substance, clarity, zkVerify relevance, and originality. Gatekeeper needs a distinct 60-second payment decision agent that checks incoming proofs and emits its own decision proof. Steal the VFY is a distinct 20-turn strategy-commitment/proof-per-turn game. Current official event pages have inconsistent track timing/status: Steal's listed 13–17 November window has passed, Gatekeeper round labels are inconsistent through 20 November, and late eligibility or one-account entry in all four tracks is unconfirmed. The overall 21 November close has no published time zone in the reviewed material. Keep all three tracks' requirements separate; no publication, deployment, registration, submission, wallet action, or spend is authorized here.
 
 ## Request bounds and deployment caveat
 
@@ -45,9 +45,9 @@ These are local, per-process controls—not shared production protection. A publ
 
 ## Limits and non-goals
 
-The demo does not create a cryptographic or zk proof, integrate with zkVerify, use a wallet, authenticate players, enforce leaderboard policy, or make the regular game accept scores. It does not establish authoritative terrain provenance, authenticated inputs, human identity, or protection from cheating. The game's separate run-token and leaderboard mechanisms are not used.
+The workbench does not create a cryptographic or zk proof, integrate with zkVerify, use a wallet, authenticate players, enforce leaderboard policy, or make the regular game accept scores. It does not establish authoritative terrain provenance, authenticated inputs, human identity, or protection from cheating. The game's separate run-token and leaderboard mechanisms are not used.
 
-The current page is explicitly titled **“RunTrace — deterministic replay-consistency check”** and states **“No cryptographic proof.”** Local social copy/storyboard is in [the draft storyboard](docs/runproof/storyboard-draft.md); it is not published.
+The local page is titled **“RunTrace — local deterministic QA workbench”** and states **“No cryptographic proof.”** Local social copy/storyboard is in [the draft storyboard](docs/runproof/storyboard-draft.md); it is not published.
 
 ## Local checks
 
@@ -62,4 +62,4 @@ bun run build --webpack
 
 The upstream Candle Climber [`LICENSE`](LICENSE) remains in place (MIT). RunTrace directly uses the existing engine, platform builder, mutation selector, and renderer; those upstream portions remain subject to the included license and notice requirement. The trace format and recorder metadata are prototype conventions, not an upstream standard.
 
-All task changes stay in `/workspace/candle-climber-agentgames` on `agentgames/runproof`. Do not add a remote, commit, deploy, publish, submit, connect a wallet, sign, or spend. The separate `/workspace/candle-climber` checkout remains outside scope.
+This work remains isolated to the private `web3-assistant/runtrace-sandbox-product-2026-11-19` branch. No deployment, public release, contest registration or submission, wallet connection or signature, or spend is part of this work. The regular `/play` route and the separate production checkout remain outside scope.

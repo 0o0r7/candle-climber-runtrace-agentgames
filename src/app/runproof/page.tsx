@@ -1,8 +1,8 @@
 import RunProofDemo from "@/components/runproof/RunProofDemo";
 
 export const metadata = {
-  title: "RunTrace — deterministic replay-consistency check",
-  description: "A local replay-consistency check; no cryptographic proof.",
+  title: "RunTrace — local deterministic QA workbench",
+  description: "Capture, import, replay-check, and export Candle Climber run traces locally; no cryptographic proof.",
   robots: { index: false, follow: false },
 };
 
