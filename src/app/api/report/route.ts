@@ -1,0 +1,60 @@
+// /api/report — H4 DAILY REPORT (P2.4): pure aggregation over the day's real
+// leaderboard entries. Default report = YESTERDAY (a completed day); any past
+// UTC date is allowed via ?date= (archive-friendly), future/malformed dates
+// fall back to yesterday. Honesty rule (the growth strategy §8): every number is
+// read off the store — an empty day reports "unclimbed", never invented data.
+// Cross-day history/durability lands with O1 (DATABASE_URL); the memory store
+// serves same-instance aggregates until then.
+import { NextResponse } from "next/server";
+import { rateLimited, clientIp } from "@/lib/http-limiter"; // G5: shared namespaced limiter (129-a #7)
+import { getBoard } from "@/lib/leaderboard-store";
+import { aggregateDay, reportNarrative, emptyNarrative, type ReportContext } from "@/lib/report";
+import { pickSeed } from "@/game/cc/level-source";
+import { isArchiveDate } from "@/game/cc/archive";
+import { utcDateStr } from "@/game/cc/rng";
+
+function yesterdayStr(today: string): string {
+  return new Date(Date.parse(`${today}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+}
+
+export async function GET(req: Request) {
+  // G5 (129-a #7): GET throttle — this lane proxies upstreams / heavy compute;
+  // an unthrottled public relay is a free compute loop for a scripted client.
+  if (rateLimited("report-get", clientIp(req), 20)) {
+    return NextResponse.json({ error: "slow down" }, { status: 429 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const today = utcDateStr();
+  const requested = searchParams.get("date");
+  // A report describes a COMPLETED day: strictly past dates only, same rule
+  // as the archive (future terrain/dates are never acknowledged).
+  const date = isArchiveDate(requested, today) ? (requested as string) : yesterdayStr(today);
+  const symbol = pickSeed(date).symbol;
+
+  const store = getBoard();
+  // 2000 = memory store's hard cap; for Mongo it is a sane M0-sized window.
+  // P3.5: the narrative describes the CLASSIC board ("1w") only — per-tf
+  // boards stay unmixed so episode figures never blend timeframes.
+  // Option B: the report narrates the WHOLE day's play ("all" lanes) — guest
+  // and official runs are both real climbs; lanes only matter for ranking.
+  const entries = await store.top(date, 2000, "1w", "all");
+
+  const rep = aggregateDay(entries);
+  const tomorrowSymbol = pickSeed(
+    new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10),
+  ).symbol;
+  const ctx: ReportContext = { symbol, tomorrowSymbol };
+
+  return NextResponse.json(
+    {
+      date,
+      symbol,
+      report: rep, // null = honest empty day
+      narrative: rep ? reportNarrative(rep, ctx) : emptyNarrative(date, symbol),
+      tomorrowSymbol,
+      store: store.kind,
+    },
+    { headers: { "Cache-Control": "public, max-age=300" } },
+  );
+}

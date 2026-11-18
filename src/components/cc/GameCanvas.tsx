@@ -1,0 +1,2219 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Engine, VIEW_W, VIEW_H } from "@/game/cc/engine";
+import { buildPlatforms } from "@/game/cc/level";
+import { dailyMutation, type Mutation } from "@/game/cc/mutations";
+import { marketStats, fmtPct } from "@/game/cc/market";
+import { pickSeed, syntheticCandles, LIMIT, ALL_SYMBOLS, INTERVALS, isInterval, stocksRotation, provenanceLabel, type GameInterval } from "@/game/cc/level-source";
+import { utcDateStr } from "@/game/cc/rng";
+import MiniChart from "@/components/cc/MiniChart";
+import ArchiveBrowser from "@/components/cc/ArchiveBrowser";
+import WalletChip from "@/components/cc/WalletChip";
+import PredictionPanel from "@/components/cc/PredictionPanel";
+import { WALLET_ADDRESS_KEY, isValidAddress } from "@/lib/wallet";
+// LAW 1.2 hardening: official-lane ownership proof — the browser builds the
+// EXACT message the server verifies (isomorphic template, no crypto import)
+import { buildProofMessage, buildMintProofMessage, buildWalletLinkProofMessage } from "@/lib/proof-message";
+import { isArchiveDate } from "@/game/cc/archive";
+import { render } from "@/game/cc/render";
+import { renderV2 } from "@/game/cc/render-v2";
+import { deriveWeather } from "@/game/cc/weather";
+import { deriveBiome, type BiomeId } from "@/game/cc/biome";
+import { recordWreck, wrecksFor, loadWreckDB, saveWreckDB, type WreckDB, type Wreck } from "@/game/cc/wreckage";
+import { makeDeathCard, normalizeRivalTag } from "@/game/cc/deathcard";
+import { DEFAULT_CHAR_ID, getChar } from "@/game/cc/characters";
+import { sfx, setMuted, setVolume, unlockAudio } from "@/game/cc/sound";
+import { vibrate, isCoarsePointer as detectCoarsePointer } from "@/game/cc/haptics";
+import SettingsPanel from "@/components/cc/SettingsPanel";
+import AchievementsPanel from "@/components/cc/AchievementsPanel";
+import { useSettings } from "@/lib/settings-context";
+import { ACHIEVEMENTS_KEY, ACHIEVEMENT_DEFS, checkAchievements, loadUnlocked, mergeUnlocked, saveUnlocked, defsFor } from "@/lib/achievements";
+import { toast } from "sonner";
+import { RivalBot, pickRivalCharId, rivalVerdict } from "@/game/cc/rival/bot";
+import { personalityForCharId } from "@/game/cc/rival/personality";
+// P7.2 ghost runs — position-stream recorder + replay (cosmetic, never scored)
+import { GhostRecorder, ghostViewAt, bestGhost, type GhostEntry, type GhostView } from "@/game/cc/ghost";
+// P7.3 async duels — a challenge code pins the SAME terrain and races the
+// recorded climb; verdict + tally are local/social (W5 untouched)
+import {
+  DUEL_CODE_RE, EMPTY_TALLY, applyDuelResult, challengeToGhost, duelUrl,
+  duelVerdict, parseTally, tallyLabel,
+  type DuelChallenge, type DuelTally,
+} from "@/game/cc/duel";
+// P0 (2026-10-29): share/ref link builders extracted to a pure module —
+// shareUrl() mints /play?ref=… links, shareRef() joins with "&" so a duel
+// link + ref parse as TWO params, not one malformed blob (see share.ts).
+import { shareRef, shareUrl } from "@/game/cc/share";
+import type { CandleData, RunResult } from "@/game/cc/types";
+import { TUTORIAL_KEY } from "@/lib/tutorial-key";
+import Tutorial from "@/components/cc/Tutorial";
+import ModeSelector, { type GameMode, loadMode, normalizeModeParam, saveMode } from "@/components/cc/ModeSelector";
+// P2 self-ghost — this device's OWN best run per terrain (local, cosmetic,
+// same replay path as the server ghost; the fallback when nobody uploaded)
+import {
+  loadSelfGhostDB, recordSelfGhost, selfGhostAsEntry, selfGhostKey,
+  SELF_GHOST_KEY, type SelfGhostDB, type SelfGhostEntry,
+} from "@/game/cc/self-ghost";
+// P2 lifetime stats ledger — honest-local, recorded once per finished run
+import {
+  emptyLedger, loadLedger, recordRun, saveLedger, STATS_KEY, type StatsLedger,
+} from "@/lib/stats-ledger";
+
+type Phase = "loading" | "ready" | "running" | "graduated" | "dead";
+
+// Visual QA 2026-10-14: shared house glyph for the HOME affordances. The owner
+// flagged the old home affordance (a bare lowercase footer link, invisible in
+// the game loop) — HOME now exists where the player actually is: the pause
+// overlay, the results panel, and a marked-up footer link. Inline SVG keeps it
+// dependency-free and crisp at HUD sizes.
+function HomeGlyph({ size = 12 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M3 11.5 12 4l9 7.5" />
+      <path d="M5.5 10.5V20h13v-9.5" />
+    </svg>
+  );
+}
+// 2026-10-15 onboarding fix (owner flag): the HOW TO PLAY re-open affordance
+// now carries a book glyph so it reads as the wizard entry point, not decor.
+function BookGlyph({ size = 13 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15.5H6.5A2.5 2.5 0 0 0 4 21V5.5Z" />
+      <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20" />
+    </svg>
+  );
+}
+interface BoardEntry {
+  name: string;
+  score: number;
+  candlesPassed: number;
+  bestStreak?: number;
+  mutation?: string;
+  date: string;
+  ts?: number;
+  interval?: string;
+  wallet?: string | null; // masked short form on GET responses (0x1234…abcd)
+  board?: "guest" | "official";
+  season?: string | null;
+}
+// H4 DAILY REPORT — aggregated over real submissions by /api/report
+interface ReportResp {
+  date: string;
+  symbol: string;
+  report: { climbers: number; topScore: number; topName: string; bestStreak: number; medianScore: number; totalHeight: number; topMutation: string | null; topMutationRuns: number } | null;
+  narrative: string[];
+  tomorrowSymbol: string;
+  store: string;
+}
+
+const BEST_KEY = "cc_best_v1";
+const NAME_KEY = "cc_name_v1";
+const RIVAL_KEY = "cc_rival_v1"; // P3.1: remembered rivalry tag
+// (legacy per-key prefs cc_mute_v1 / cc_vsbot_v1 / cc_ghost_v1 are migrated
+// into cc_settings_v1 by settings-context — no direct reads remain here)
+const RUNS_KEY = "cc_runs_v1";
+const TF_KEY = "cc_tf_v1"; // P3.5: remembered timeframe ("1w" classic default)
+const DUEL_TALLY_KEY = "cc_duel_v1"; // P7.3: local duel W-L-D tally (no server identity exists)
+const REF_KEY = "cc_ref_v1"; // E5.5: referral attribution — last ?ref= landing param on this device
+// E5.5: every traveling text carries a measurable link (shareUrl/shareRef
+// from @/game/cc/share). Loop: share link → /play?ref= landing → REF_KEY →
+// POST body ref → board row → /ops rollup.
+const UNSCORED_MSG = "offline terrain — scoring disabled";
+const ARCHIVE_MSG = "practice — archive terrain is unscored";
+
+export default function GameCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const engineRef = useRef<Engine | null>(null);
+  const rafRef = useRef<number>(0);
+  const lastRef = useRef<number>(0);
+  const accRef = useRef<number>(0);
+  // V-PHASE V-1: canvas backing-store geometry for the screen-space clear
+  const fitRef = useRef<{ dpr: number; w: number; h: number; s: number; ox: number; oy: number }>({ dpr: 1, w: 0, h: 0, s: 1, ox: 0, oy: 0 });
+  const [phase, setPhase] = useState<Phase>("loading");
+  const [data, setData] = useState<CandleData | null>(null);
+  const [mutation, setMutation] = useState<Mutation | null>(null);
+  // P3.2: mutation id flows into the renderers via ref — the RAF loop must not
+  // re-subscribe on mutation change (same pattern as seedRef/wrecksRef)
+  const mutationIdRef = useRef<string | undefined>(undefined);
+  const [hud, setHud] = useState({ score: 0, combo: 0, candles: 0 });
+  const [result, setResult] = useState<RunResult | null>(null);
+  const [graduated, setGraduated] = useState(false); // W4: summit reached
+  const [world2, setWorld2] = useState(false); // W4: post-grad buyback world
+  const [best, setBest] = useState(0);
+  const [name, setName] = useState("");
+  const [rival, setRival] = useState(""); // P3.1: optional rival X handle for the death-card challenge stamp
+  const [board, setBoard] = useState<BoardEntry[]>([]); // guest lane (classic board)
+  const [topBoard, setTopBoard] = useState<BoardEntry[]>([]); // guest top (rival context)
+  // Option B (LAW 1.2 dated note, 2026-10-10): official wallet-bound board —
+  // fetched only when a wallet is linked; both lanes stay labeled on the panel.
+  const [officialBoard, setOfficialBoard] = useState<BoardEntry[]>([]);
+  const [officialSeason, setOfficialSeason] = useState<string | null>(null);
+  const [submittedBoard, setSubmittedBoard] = useState<"guest" | "official" | null>(null);
+  // LAW 1.2 hardening: honest lane note — set when a wallet was linked but the
+  // run landed on the guest board (signature skipped/failed/rejected)
+  const [laneNote, setLaneNote] = useState<string | null>(null);
+  const [rank, setRank] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  // Death Card mint (TESTNET) — post-death detour, wallet-only, never blocks a
+  // retry. States: idle → signing → sending → confirming → minted | error.
+  const [mintState, setMintState] = useState<"idle" | "signing" | "sending" | "confirming" | "minted" | "error">("idle");
+  const [mintMsg, setMintMsg] = useState<string | null>(null);
+  const [mintUrl, setMintUrl] = useState<string | null>(null);
+  const [muted, setMutedState] = useState(false);
+  // Settings context — centralized settings (volume, colorblind, haptics, etc.)
+  const { settings, update: updateSettings } = useSettings();
+  // Live mirror of the settings store for run-scoped closures — the engine
+  // factory (buildEngine) and the RAF render loop are created once per run,
+  // so reading `settings` directly would freeze at mount. The ref always sees
+  // the latest value without recreating the engine mid-run.
+  const settingsRef = useRef(settings);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
+  // Achievement toast queue — newly unlocked ids this session
+  const [newAchievements, setNewAchievements] = useState<string[]>([]);
+  // P2.4: yesterday's episode — honest aggregates over the day's submissions
+  const [report, setReport] = useState<ReportResp | null>(null);
+  const [reportCopied, setReportCopied] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false); // G2 de-clutter: folded by default
+  // P2.1 A/B → PROMOTED 2026-10-10: render-v2 IS the default face of the game
+  // (owner find: the A/B was never flipped after the 09-30 ship — "forgotten").
+  // render-only: physics/scoring/determinism identical (single Engine.step, shared
+  // level.ts constants). /?renderer=v1 is the explicit legacy opt-out. Set
+  // client-side in the load effect to avoid SSR hydration mismatch.
+  const [v2, setV2] = useState(true);
+  // P2.2: H1 ARCHIVE — /?symbol=&date=<past UTC date> plays real history as
+  // PRACTICE terrain (submission suppressed; W1 staleness stays authoritative).
+  const [archive, setArchive] = useState(false);
+  const [archOpen, setArchOpen] = useState(false);
+  // P2.5: H3 WRECKAGE — per-device frozen death ghosts (decor only)
+  const wreckDBRef = useRef<WreckDB>({});
+  const wrecksRef = useRef<Wreck[]>([]);
+  const seedRef = useRef<string>("");
+  // P3.5: deep-link pins parsed once by the init effect, consumed by the loader
+  const requestedSymRef = useRef("");
+  const requestedDateRef = useRef<string | null>(null);
+  const launchRef = useRef(false);
+  const [tf, setTf] = useState<GameInterval>("1w"); // timeframe selector
+  const [mode, setMode] = useState<GameMode>("crypto"); // 3-mode: crypto | stocks | launchpad
+  const [booted, setBooted] = useState(false); // init ran → loader may fetch
+  // R-1 (docs/RETIRED-FEATURES.md): the character-SELECTION UI was retired
+  // 2026-10-15 by owner directive — everyone climbs as CLASSIC. The ref still
+  // feeds the RAF renderer; the registry stays for bot skins, ?char= deep-link
+  // removal is intentional, and archived-run/ghost champion names still resolve.
+  const charIdRef = useRef<string>(DEFAULT_CHAR_ID);
+  // P7.1: rival bot — local headless engine + heuristic planner; zero network,
+  // its score/height are local UI only (W5 anti-cheat red line: never submitted)
+  const [vsBot, setVsBot] = useState(false);
+  const vsBotRef = useRef(false); // RAF loop reads the ref (no re-subscribe)
+  const botRef = useRef<RivalBot | null>(null);
+  const [verdict, setVerdict] = useState<string | null>(null);
+
+  // P7.2: ghost replay — the best submitted run on THIS terrain, replayed as a
+  // translucent climber. Recorder is honest-local; the ghost POST rides the
+  // SAME verified run-token as the leaderboard (server pins terrain from it).
+  // Cosmetic contract: ghosts never affect scores/ranks (W5 untouched).
+  const [ghostOn, setGhostOn] = useState(true);
+  const ghostOnRef = useRef(true); // RAF loop reads the ref (no re-subscribe)
+  const ghostRef = useRef<GhostEntry | null>(null); // RAF loop reads the ref
+  const [ghostEntry, setGhostEntry] = useState<GhostEntry | null>(null); // UI mirror (refs don't re-render)
+  const ghostRecRef = useRef<GhostRecorder>(new GhostRecorder());
+
+  // P7.3: async duel — the loaded challenge (target + replayable climb), the
+  // local W-L-D tally, and the code created from THIS device's last run.
+  const [duel, setDuel] = useState<DuelChallenge | null>(null);
+  const duelRef = useRef<DuelChallenge | null>(null); // death/grad handlers read the ref
+  const duelLockRef = useRef(false); // once a duel loads it owns the ghost replay slot
+  const [duelTally, setDuelTally] = useState<DuelTally>(EMPTY_TALLY);
+  const [duelCode, setDuelCode] = useState<string | null>(null); // challenge created from this run
+  const [duelBusy, setDuelBusy] = useState(false);
+  const [duelCopied, setDuelCopied] = useState(false);
+  const [codeOpen, setCodeOpen] = useState(false); // code entry reveal (collapsed = zero clutter)
+  const [codeInput, setCodeInput] = useState("");
+  const [codeErr, setCodeErr] = useState(false);
+
+  // P2 pause — a LOOP-level freeze, not an engine feature: the fixed-step
+  // block simply stops while paused, so physics, camera, rival bot and the
+  // ghost recorder all freeze on the same clock. W5 byte-determinism is
+  // untouched (the engine object never learns about pausing).
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const pausePanelRef = useRef<HTMLDivElement | null>(null);
+  const phaseRef = useRef<Phase>("loading"); // blur/visibility handlers read this
+
+  // P2 self-ghost state — refs for the RAF loop, state for the UI note
+  const selfDBRef = useRef<SelfGhostDB>({});
+  const selfGhostRef = useRef<GhostEntry | null>(null); // RAF fallback slot
+  const [selfGhostEntry, setSelfGhostEntry] = useState<SelfGhostEntry | null>(null);
+
+  // P2 lifetime ledger — recorded EXACTLY ONCE per finished run
+  const ledgerRef = useRef<StatsLedger>(emptyLedger());
+  const usedRushRef = useRef(false); // per-run RUSH usage — feeds DIAMOND HANDS honestly
+  const [currentStreak, setCurrentStreak] = useState(0); // streak chip renders from state (refs don't re-render)
+  const runRecordedRef = useRef(false);
+  const tfRef = useRef<GameInterval>("1w"); // self-ghost key needs the interval
+
+  // E2 economy hooks (LAW 1: display-only — the game never reads these):
+  // E2.3 practice lane note (archive run banked 0.5 weight), E2.4 vault state,
+  // E2.6 burn-counter line. nameRef mirrors `name` for the death-path POSTs.
+  const nameRef = useRef("");
+  const [practiceNote, setPracticeNote] = useState<string | null>(null);
+  const [vaultMsg, setVaultMsg] = useState<string | null>(null);
+  const [vaultBusy, setVaultBusy] = useState(false);
+  const [hasWallet, setHasWallet] = useState(false);
+  // ART V4: the peak-wick candle index (vault sprite anchor) mirrored into a
+  // ref for the RAF render loop; -1 hides the chest (no data / archive — the
+  // vault never opens on practice terrain, the sprite stays honest).
+  const peakIdxRef = useRef(-1);
+  // ART V4: seconds since the GRADUATED panel opened, fed by the RAF clock as
+  // an explicit render param (the engine is frozen while the panel is up —
+  // engine time cannot drive the celebration without breaking its contract).
+  const celebrateRef = useRef(0);
+  // Option B: lane selection at boot — a SAVED wallet puts this device on the
+  // official lane for board context (read-only UI choice; score math untouched,
+  // LAW 1.3: skill-only scoreboard).
+  useEffect(() => {
+    if (isValidAddress(localStorage.getItem(WALLET_ADDRESS_KEY))) setHasWallet(true);
+    // WalletChip connect/disconnect broadcasts — the official-lane context
+    // follows the REAL saved address at all times (never blocks play).
+    const onWalletChanged = () =>
+      setHasWallet(isValidAddress(localStorage.getItem(WALLET_ADDRESS_KEY)));
+    window.addEventListener("cc-wallet-changed", onWalletChanged);
+    return () => window.removeEventListener("cc-wallet-changed", onWalletChanged);
+  }, []);
+  const [burn, setBurn] = useState<string | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const showTutorialRef = useRef(false);
+  useEffect(() => { showTutorialRef.current = showTutorial; }, [showTutorial]);
+  // Tutorial: auto-show when the ready screen appears and the current-version
+  // seen-flag is absent (first visit — plus exactly one re-show per key bump;
+  // see src/lib/tutorial-key.ts for the bump policy).
+  useEffect(() => {
+    if (phase === "ready") {
+      try { if (!localStorage.getItem(TUTORIAL_KEY)) setShowTutorial(true); } catch { /* private mode */ }
+    }
+  }, [phase]);
+  // Audit fix (touch UX): the SHIFT = RUSH line is keyboard-only — hide it on
+  // coarse-pointer (touch) devices so mobile players don't see a dead control.
+  const [coarsePointer, setCoarsePointer] = useState(false);
+  useEffect(() => {
+    try { setCoarsePointer(window.matchMedia("(pointer: coarse)").matches); } catch { /* SSR / private mode */ }
+  }, []);
+  // Audit fix (a11y): move focus into the death panel so keyboard/screen-reader
+  // users land in the run-end flow instead of staying on the canvas.
+  const deathPanelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (phase === "dead") {
+      try { deathPanelRef.current?.focus(); } catch { /* noop */ }
+
+    }
+  }, [phase]);
+
+  // P7.3: load a duel challenge by code (deep link ?duel= or a typed code).
+  // On success it pins the terrain refs BEFORE the loader effect runs (the
+  // deep-link path holds `booted` until this settles → exactly one fetch).
+  const loadDuel = useCallback(async (rawCode: string): Promise<boolean> => {
+    const code = rawCode.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+    if (!DUEL_CODE_RE.test(code)) return false;
+    try {
+      const res = await fetch(`/api/duels?code=${code}`);
+      const j = (await res.json()) as { duel?: DuelChallenge | null };
+      const ch = j.duel ?? null;
+      // whitelist the challenge shape client-side too — a poisoned record can
+      // never pin the loader at a bogus terrain
+      if (!ch || !ALL_SYMBOLS.includes(ch.symbol) || !/^\d{4}-\d{2}-\d{2}$/.test(ch.date) || !isInterval(ch.interval)) {
+        return false;
+      }
+      duelLockRef.current = true; // the duel owns the ghost replay slot
+      duelRef.current = ch;
+      ghostRef.current = challengeToGhost(ch); // replay the climb you must beat
+      requestedSymRef.current = ch.symbol;
+      requestedDateRef.current = ch.date;
+      // past terrain = practice duel (W1 staleness stays authoritative: the
+      // archive run itself stays unscored, the duel verdict stays local)
+      setArchive(isArchiveDate(ch.date, utcDateStr()));
+      setTf(ch.interval);
+      setDuel(ch);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // init: persisted prefs + deep-link parsing (no fetching here — the loader
+  // effect below owns the fetch so a timeframe change re-loads cleanly)
+  useEffect(() => {
+    setBest(Number(localStorage.getItem(BEST_KEY) ?? 0));
+    setName(localStorage.getItem(NAME_KEY) ?? "");
+    setRival(localStorage.getItem(RIVAL_KEY) ?? ""); // P3.1
+    // Settings-driven audio: sync mute/volume from the centralized settings store
+    setMutedState(settings.muted);
+    if (settings.muted) setMuted(true);
+    setVolume(settings.volume);
+    // optional deep links (whitelist-checked; the server still pins the terrain
+    // and issues the run token): /play?symbol=ETHUSDT opens that chart,
+    // /play?source=launch plays the vibe/vibe launch-of-the-day level,
+    // /play?date=<past UTC date> plays the archive (H1), and /play?interval=1h|4h|1d
+    // pins the timeframe (P3.5) — famous history as terrain. (P0 2026-10-29:
+    // links are minted at /play; legacy "/" deep links are forwarded by middleware.)
+    const params = new URLSearchParams(window.location.search);
+    setV2(params.get("renderer") !== "v1"); // default v2; only explicit v1 downgrades (promoted 2026-10-10)
+    wreckDBRef.current = loadWreckDB(); // H3: this device's death map
+    selfDBRef.current = loadSelfGhostDB(localStorage.getItem(SELF_GHOST_KEY)); // P2 self-ghost
+    ledgerRef.current = loadLedger(localStorage.getItem(STATS_KEY)); // P2 stats ledger
+    setCurrentStreak(ledgerRef.current.currentStreak);
+    const requested = (params.get("symbol") ?? "").toUpperCase();
+    const requestedDate = params.get("date");
+    const isArch = isArchiveDate(requestedDate, utcDateStr());
+    setArchive(isArch);
+    requestedSymRef.current = ALL_SYMBOLS.includes(requested) ? requested : "";
+    requestedDateRef.current = requestedDate;
+    launchRef.current = !isArch && params.get("source") === "launch"; // single whitelisted value
+    const reqIv = params.get("interval"); // P3.5: deep link beats the saved pref
+    if (isInterval(reqIv)) setTf(reqIv);
+    else if (isInterval(localStorage.getItem(TF_KEY))) setTf(localStorage.getItem(TF_KEY) as GameInterval);
+    // P7.1/P7.2: SOLO-vs-bot and ghost toggles live in the settings store now
+    // (cc_settings_v1 — settings-context migrates the legacy cc_vsbot_v1 /
+    // cc_ghost_v1 keys). The mirror effect below keeps RAF refs + UI in sync.
+    // 3-mode: ?mode=<crypto|stocks|launchpad> is the canonical deep link from
+    // the landing page's mode selector (legacy "market" maps to "crypto").
+    // ?source=launch stays for backward compat (legacy links). Persisted pref
+    // (cc_mode_v2, auto-migrated from v1) is the fallback for bare /play visits.
+    const urlMode = params.get("mode");
+    const urlSource = params.get("source");
+    const normalizedMode = normalizeModeParam(urlMode);
+    if (normalizedMode) {
+      setMode(normalizedMode);
+      saveMode(normalizedMode);
+    } else if (urlSource === "launch") {
+      setMode("launchpad");
+      saveMode("launchpad");
+    } else {
+      setMode(loadMode());
+    }
+    // P7.3: local duel tally (no server identity — the record lives here)
+    setDuelTally(parseTally(localStorage.getItem(DUEL_TALLY_KEY)));
+    // P7.3: ?duel=CODE deep link — hold the loader until the duel resolves so
+    // the terrain fetches exactly once (the duel's terrain, not the default).
+    const duelParam = (params.get("duel") ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+    // E5.5: ?ref= landing attribution — persisted device-wide; every later
+    // submission stamps it onto its board row (opaque, sanitized, server-clamped)
+    const refParam = params.get("ref");
+    if (refParam && /^[A-Za-z0-9_-]{1,24}$/.test(refParam)) localStorage.setItem(REF_KEY, refParam);
+    if (DUEL_CODE_RE.test(duelParam)) {
+      void loadDuel(duelParam).finally(() => setBooted(true));
+    } else {
+      setBooted(true);
+    }
+  }, [loadDuel]);
+
+  // level loader — re-runs on timeframe change (P3.5): same pipeline, seed keys
+  // carry the interval server-side; archive stays daily-only ("1w") in V1.
+  useEffect(() => {
+    if (!booted) return;
+    let alive = true;
+    setPhase("loading");
+    // a timeframe switch invalidates any run state from the previous terrain
+    setResult(null);
+    setRank(null);
+    setLaneNote(null);
+    setGraduated(false);
+    setWorld2(false);
+    const isArch = archive;
+    const isLaunchpad = mode === "launchpad" && !isArch && !duelLockRef.current;
+    // STOCKS mode clamps the effective timeframe to "1w": the equity rails
+    // (Yahoo/Stooq weekly) have no intraday feed — the server already pins
+    // "1w" for stocks, so the client pins its board/ghost queries to the SAME
+    // interval instead of asking for a 4h board on a 1w terrain. The saved tf
+    // pref is untouched and applies again when the player returns to CRYPTO.
+    const isStocks = mode === "stocks" && !isArch && !duelLockRef.current;
+    const effTf: GameInterval = isStocks ? "1w" : tf;
+    ghostRef.current = null; // terrain switch invalidates the previous ghost
+    const query = new URLSearchParams();
+    if (requestedSymRef.current) query.set("symbol", requestedSymRef.current);
+    if (isArch && requestedDateRef.current) query.set("date", requestedDateRef.current); // server re-validates (past dates only)
+    if (launchRef.current || isLaunchpad) query.set("source", "launch");
+    if (!isArch) query.set("interval", effTf);
+    // 3-mode: the pool param scopes the DEFAULT daily symbol to the mode's
+    // own rotation (crypto / stocks) — pinned deep-link symbols still win.
+    if (!isArch && mode === "stocks") query.set("pool", "stocks");
+    else if (!isArch && mode === "crypto") query.set("pool", "crypto");
+    const qs = query.toString();
+    // Launchpad Mode: fetch from the dedicated /api/launchpad endpoint (on-chain
+    // indexer); CRYPTO/STOCKS modes: the standard /api/candles feed chain with
+    // the mode's pool.
+    const fetchUrl = isLaunchpad ? "/api/launchpad" : `/api/candles${qs ? `?${qs}` : ""}`;
+    fetch(fetchUrl)
+      .then((r) => r.json())
+      .then((d: CandleData) => {
+        if (!alive) return;
+        seedRef.current = d.seed.date + d.seed.symbol;
+        wrecksRef.current = wrecksFor(wreckDBRef.current, seedRef.current);
+        setData(d);
+        setMutation(dailyMutation(d.seed.date + d.seed.symbol));
+        refreshSelfGhost(d); // P2: mirror this terrain's own best ghost (if any)
+        setPhase("ready");
+        if (!isArch) {
+          // G5 (129-c #7): boards follow the TERRAIN's timeframe, not the raw
+          // selector — a launchpad run lands on the 1w board and a CoinGecko
+          // run on the 1d board, so refreshing ?interval=<selector> made the
+          // submitted run invisible on the board shown right after landing.
+          const seedIv = isInterval(d.seed.interval) ? d.seed.interval : effTf;
+          fetch(`/api/leaderboard?date=${d.seed.date}&interval=${seedIv}`)
+            .then((r) => r.json())
+            .then((b) => {
+              if (!alive) return;
+              setTopBoard(b.entries ?? []);
+              setBoard(b.entries ?? []);
+              // LU-14: the guest-board response now includes `official` (top 10
+              // verified entries) so the UI can show wallet-proven scores first —
+              // even for walletless players who never fetched the official lane.
+              if (b.official && b.official.length > 0) {
+                setOfficialBoard(b.official);
+                if (b.season) setOfficialSeason(b.season);
+              }
+            })
+            .catch(() => {});
+          // Option B: official lane loads only for wallet-linked devices
+          if (isValidAddress(localStorage.getItem(WALLET_ADDRESS_KEY))) {
+            fetch(`/api/leaderboard?date=${d.seed.date}&interval=${seedIv}&board=official`)
+              .then((r) => r.json())
+              .then((b) => {
+                if (!alive) return;
+                setOfficialBoard(b.entries ?? []);
+                if (b.season) setOfficialSeason(b.season);
+              })
+              .catch(() => {});
+          }
+          // H4: yesterday's episode for the ready screen (cliffhanger loop)
+          fetch("/api/report")
+            .then((r) => r.json())
+            .then((rp: ReportResp) => { if (alive) setReport(rp); })
+            .catch(() => {});
+          // E2.6: burn counter — the "the game eats its own supply" line
+          fetch("/api/burn")
+            .then((r) => r.json())
+            .then((b: { ok?: boolean; burned?: string }) => { if (alive && b.ok) setBurn(b.burned ?? null); })
+            .catch(() => {});
+          // P7.2: best submitted ghost for THIS terrain (champion first)
+          fetch(`/api/ghosts?symbol=${d.seed.symbol}&date=${d.seed.date}&interval=${seedIv}`)
+            .then((r) => r.json())
+            .then((g: { ghosts?: GhostEntry[] }) => {
+              if (!alive || duelLockRef.current) return; // P7.3: a loaded duel owns the ghost slot
+              const best = bestGhost(g.ghosts ?? []);
+              ghostRef.current = best;
+              setGhostEntry(best);
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {
+        if (!alive) return;
+        // API unreachable — derive the SAME level client-side from the
+        // shared seed (identical to what the server would serve; play never
+        // crashes). Archive deep links keep their date; terrain is synthetic
+        // (tokenless → unscored) until the API returns.
+        const date = isArch ? (requestedDateRef.current as string) : utcDateStr();
+        const symbol = requestedSymRef.current || (isStocks ? stocksRotation(date) : pickSeed(date).symbol);
+        const iv: GameInterval = isArch || isStocks ? "1w" : tf; // offline fallback mirrors the server's stocks "1w" pin
+        const d: CandleData = {
+          seed: { date, symbol, interval: iv, source: "synthetic" },
+          candles: syntheticCandles(date, LIMIT, iv),
+        };
+        seedRef.current = d.seed.date + d.seed.symbol;
+        wrecksRef.current = wrecksFor(wreckDBRef.current, seedRef.current);
+        setData(d);
+        setMutation(dailyMutation(d.seed.date + d.seed.symbol));
+        refreshSelfGhost(d); // P2: synthetic terrain gets a self-ghost too
+        setPhase("ready");
+      });
+    return () => { alive = false; };
+  }, [tf, archive, booted, mode]);
+
+  // P3.5: timeframe switch — persist and let the loader effect re-fetch
+  const changeTf = useCallback((iv: GameInterval) => {
+    setTf((cur) => {
+      if (iv !== cur) localStorage.setItem(TF_KEY, iv);
+      return iv;
+    });
+  }, []);
+
+  // Two-mode became three (council 2026-10-12 B): CRYPTO/STOCKS/LAUNCHPAD —
+  // switching persists (cc_mode_v2) and triggers the loader effect to re-fetch
+  // from the mode's own pool.
+  const changeMode = useCallback((m: GameMode) => {
+    setMode(m);
+    saveMode(m);
+    sfx.land();
+  }, []);
+
+  // P7.2: ghost replay toggle — single source of truth is the settings store
+  // (persistence handled there); the ref mirrors it for the RAF loop.
+  const changeGhost = useCallback((on: boolean) => {
+    setGhostOn(on);
+    ghostOnRef.current = on; // immediate — the RAF loop reads the ref
+    updateSettings({ ghostOn: on });
+  }, [updateSettings]);
+
+  // P7.1: SOLO / VS BOT toggle — single source of truth is the settings store
+  // (default SOLO keeps every existing QA/leaderboard/anti-cheat flow intact).
+  const changeVsBot = useCallback((on: boolean) => {
+    setVsBot(on);
+    vsBotRef.current = on;
+    updateSettings({ botOn: on });
+    sfx.land();
+  }, [updateSettings]);
+
+  // ---- P2 pause ------------------------------------------------------------
+  useEffect(() => {
+    tfRef.current = tf;
+  }, [tf]);
+
+  // phase mirror + pause teardown: a panel (death/graduated) replaces the
+  // pause overlay — returning to a frozen run from those panels is a trap.
+  useEffect(() => {
+    phaseRef.current = phase;
+    if (phase !== "running" && pausedRef.current) applyPause(false);
+  }, [phase]);
+
+  const applyPause = useCallback((v: boolean) => {
+    if (pausedRef.current === v) return;
+    pausedRef.current = v;
+    setPaused(v);
+    if (v) {
+      // release held inputs so nothing lingers across the freeze
+      engineRef.current?.release();
+      engineRef.current?.releaseRush();
+    } else {
+      // resume from a clean clock — no accumulated frame debt
+      lastRef.current = performance.now();
+      accRef.current = 0;
+    }
+  }, []);
+
+  const togglePause = useCallback(() => {
+    if (phaseRef.current !== "running") return;
+    applyPause(!pausedRef.current);
+  }, [applyPause]);
+
+  // Audit I: tab suspension must not silently kill a live run — hiding the
+  // tab or losing the window auto-pauses. Returning, the player resumes
+  // deliberately (the overlay is waiting, the clock is clean).
+  useEffect(() => {
+    const onHide = () => { if (document.hidden && phaseRef.current === "running") applyPause(true); };
+    const onBlur = () => { if (phaseRef.current === "running") applyPause(true); };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [applyPause]);
+
+  // focus lands on the pause dialog so keyboard users are inside it
+  useEffect(() => {
+    if (paused) { try { pausePanelRef.current?.focus(); } catch { /* noop */ } }
+  }, [paused]);
+
+  // ---- P2 self-ghost + ledger ---------------------------------------------
+  // Mirror this terrain's own best (if any) into the RAF fallback slot.
+  const refreshSelfGhost = useCallback((d: CandleData) => {
+    const key = selfGhostKey(d.seed.date, d.seed.symbol, d.seed.interval);
+    const se = selfDBRef.current[key] ?? null;
+    selfGhostRef.current = se ? selfGhostAsEntry(key, se) : null;
+    setSelfGhostEntry(se);
+  }, []);
+
+  // Save a finished run's stream as the device's own ghost when it beats the
+  // stored one (recordSelfGhost keeps the best; double-calls across the
+  // graduation→death path are harmless and pick up the longer final stream).
+  const maybeSaveSelfGhost = useCallback((d: CandleData, candlesPassed: number, score: number) => {
+    const samples = ghostRecRef.current.flush();
+    if (samples.length === 0) return;
+    const key = selfGhostKey(d.seed.date, d.seed.symbol, d.seed.interval);
+    const res = recordSelfGhost(selfDBRef.current, key, {
+      charId: charIdRef.current,
+      candlesPassed,
+      score,
+      ts: Date.now(),
+      samples,
+    });
+    if (!res.saved) return;
+    selfDBRef.current = res.db;
+    try { localStorage.setItem(SELF_GHOST_KEY, JSON.stringify(res.db)); } catch { /* private mode — cosmetic only */ }
+    selfGhostRef.current = selfGhostAsEntry(key, res.db[key]);
+    setSelfGhostEntry(res.db[key]);
+  }, []);
+
+  // P2: a run is recorded into the ledger EXACTLY ONCE — at its true end.
+  // (a) death fires onDeath once; (b) a graduated engine abandoned from the
+  // summit panel never dies — startRun records it before replacing it.
+  const recordFinishedRun = useCallback((r: RunResult, died: boolean) => {
+    if (runRecordedRef.current) return;
+    runRecordedRef.current = true;
+    ledgerRef.current = recordRun(ledgerRef.current, {
+      score: r.score,
+      candlesPassed: r.candlesPassed,
+      bestStreak: r.bestStreak,
+      graduated: r.graduated === true,
+      died,
+    }, Date.now());
+    try { localStorage.setItem(STATS_KEY, saveLedger(ledgerRef.current)); } catch { /* private mode */ }
+    setCurrentStreak(ledgerRef.current.currentStreak); // streak chip renders from state
+
+    // Achievement check — compare run stats against definitions
+    try {
+      const existing = loadUnlocked(localStorage.getItem(ACHIEVEMENTS_KEY));
+      const satisfied = checkAchievements({
+        score: r.score,
+        candlesPassed: r.candlesPassed,
+        bestStreak: r.bestStreak,
+        graduated: r.graduated === true,
+        died,
+        usedRush: usedRushRef.current, // per-run RUSH usage — DIAMOND HANDS is earned, not given
+        enteredWorld2: r.world2 === true,
+        currentStreak: ledgerRef.current.currentStreak,
+        duelWins: parseTally(localStorage.getItem(DUEL_TALLY_KEY) ?? "").w,
+      });
+      const { newlyUnlocked, all } = mergeUnlocked(existing, satisfied);
+      if (newlyUnlocked.length > 0) {
+        localStorage.setItem(ACHIEVEMENTS_KEY, saveUnlocked(all));
+        setNewAchievements((prev) => [...prev, ...newlyUnlocked]);
+        for (const id of newlyUnlocked) {
+          const def = ACHIEVEMENT_DEFS.find((d) => d.id === id);
+          if (def) toast(`🏆 ${def.name}`, { description: def.desc });
+        }
+      }
+    } catch { /* private mode */ }
+  }, []);
+
+  // P7.1: the rival's skin/personality is deterministic per level seed — the
+  // same daily chart pits every player against the same-flavored ghost
+  const rivalCharId = useMemo(
+    () => (data ? pickRivalCharId(seedRef.current) : "wickvenom"),
+    [data],
+  );
+  const rivalPers = useMemo(() => personalityForCharId(rivalCharId), [rivalCharId]);
+  const rivalName = getChar(rivalCharId).name;
+
+  // E2.4: the vault sits at the peak-wick candle — the terrain's tallest high.
+  // A run that PASSED that candle index may open it (server re-verifies token,
+  // tier and the one-per-day cap; client check is display-only).
+  const peakIdx = useMemo(() => {
+    if (!data || data.candles.length === 0) return -1;
+    let pi = 0;
+    for (let i = 1; i < data.candles.length; i++) {
+      if (data.candles[i].h > data.candles[pi].h) pi = i;
+    }
+    return pi;
+  }, [data]);
+  const reachedPeak = !archive && result != null && peakIdx >= 0 && result.candlesPassed >= peakIdx;
+
+  // ART V4: mirror peakIdx into the render-loop ref (archive ⇒ no chest)
+  useEffect(() => {
+    peakIdxRef.current = archive ? -1 : peakIdx;
+  }, [archive, peakIdx]);
+
+  const openVault = useCallback(async () => {
+    if (!data?.runToken || vaultBusy) return;
+    setVaultBusy(true);
+    try {
+      // LU-2: the vault requires wallet ownership proof — sign a purpose-
+      // separated message (different from the board proof) to verify ownership.
+      const walletAddr = localStorage.getItem(WALLET_ADDRESS_KEY);
+      let signature: string | undefined;
+      let proofTs: number | undefined;
+      if (walletAddr && isValidAddress(walletAddr)) {
+        const eth = (window as unknown as { ethereum?: { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum;
+        if (eth) {
+          proofTs = Date.now();
+          const msg = buildWalletLinkProofMessage(
+            { wallet: walletAddr.toLowerCase(), purpose: "vault", date: data.seed.date },
+            proofTs,
+          );
+          const msgHex = "0x" + [...new TextEncoder().encode(msg)].map((b) => b.toString(16).padStart(2, "0")).join("");
+          try {
+            const s = await Promise.race([
+              eth.request({ method: "personal_sign", params: [msgHex, walletAddr] }),
+              new Promise<never>((_, rej) => setTimeout(() => rej(new Error("sign-timeout")), 30_000)),
+            ]);
+            if (typeof s === "string" && /^0x[0-9a-fA-F]{130}$/.test(s)) signature = s;
+          } catch { /* rejected — vault stays locked */ }
+        }
+      }
+      const res = await fetch("/api/vault", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          runToken: data.runToken,
+          name,
+          address: walletAddr ?? undefined,
+          signature,
+          ts: proofTs,
+        }),
+      });
+      const r = (await res.json()) as { ok?: boolean; error?: string; grant?: { cosmetic?: string } };
+      setVaultMsg(
+        res.status === 409 ? "VAULT ALREADY OPENED TODAY"
+        : r.ok ? `VAULT OPENED · +1 WEIGHT · ${String(r.grant?.cosmetic ?? "").toUpperCase().replace("-", " ")} TRAIL TODAY`
+        : String(r.error ?? "VAULT LOCKED").toUpperCase(),
+      );
+    } catch {
+      setVaultMsg("VAULT UNAVAILABLE");
+    } finally {
+      setVaultBusy(false);
+    }
+  }, [data, name, vaultBusy]);
+
+  const buildEngine = useCallback((d: CandleData, mut: Mutation) => {
+    usedRushRef.current = false; // per-run reset — RUSH usage is measured per run
+    const plats = buildPlatforms(d.candles, d.seed.date + d.seed.symbol);
+    return new Engine(
+      plats,
+      {
+        onScore: (score, combo) => setHud({ score, combo, candles: engineRef.current?.candlesPassed ?? 0 }),
+        onSfx: (s) => {
+          sfx[s]();
+          // Haptics — gated by settings, only on coarse-pointer (mobile) devices
+          if (settingsRef.current.haptics && detectCoarsePointer()) {
+            if (s === "jump") vibrate(10);
+            else if (s === "land") vibrate(15);
+            else if (s === "milestone") vibrate([10, 30, 10]);
+            else if (s === "victory") vibrate([20, 40, 20, 40, 60]);
+          }
+        },
+        onGraduate: () => {
+          // W4: summit reached — pause for the celebration panel; the run is
+          // still live (score snapshot now, real RunResult only at death).
+          const eng = engineRef.current;
+          if (!eng) return;
+          setGraduated(true);
+          setResult({
+            score: Math.floor(eng.score),
+            candlesPassed: eng.candlesPassed,
+            bestStreak: eng.bestStreak,
+            candleIndex: eng.candlesPassed,
+            graduated: true,
+            world2: eng.world2,
+          });
+          setHud({ score: Math.floor(eng.score), combo: 0, candles: eng.candlesPassed });
+          // P7.1: local verdict at the summit (rival is frozen while panels are up).
+          // P7.3: a loaded duel outranks the bot in the verdict line (display
+          // only — the tally folds once, at death, since world 2 can still
+          // improve the run).
+          const botGrad = botRef.current;
+          const duelGrad = duelRef.current;
+          if (duelGrad) {
+            setVerdict(duelVerdict(duelGrad, { score: Math.floor(eng.score), candlesPassed: eng.candlesPassed }).line);
+          } else if (vsBotRef.current && botGrad) {
+            setVerdict(rivalVerdict(eng.candlesPassed, botGrad.bestCandles).line);
+          }
+          setPhase("graduated");
+        },
+        onDeath: (r) => {
+          sfx.death();
+          setHasWallet(!!localStorage.getItem(WALLET_ADDRESS_KEY));
+          // E2.3 practice lane: a run on PAST terrain banks 0.5 weight (server
+          // verifies the signed archive token; 2/day cap). Fire-and-forget,
+          // display-only — never blocks or alters the run's end state (LAW 1).
+          if (d.seed.date < utcDateStr() && d.runToken) {
+            // LU-2: sign a wallet-link proof so the weights ledger links to a
+            // verified wallet. Fire-and-forget — the proof failure degrades to
+            // name-only identity (never blocks play, LAW 1.2 fail-open).
+            void (async () => {
+              const walletAddr = localStorage.getItem(WALLET_ADDRESS_KEY);
+              let signature: string | undefined;
+              let proofTs: number | undefined;
+              if (walletAddr && isValidAddress(walletAddr)) {
+                const eth = (window as unknown as { ethereum?: { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum;
+                if (eth) {
+                  proofTs = Date.now();
+                  const msg = buildWalletLinkProofMessage(
+                    { wallet: walletAddr.toLowerCase(), purpose: "practice", date: d.seed.date },
+                    proofTs,
+                  );
+                  const msgHex = "0x" + [...new TextEncoder().encode(msg)].map((b) => b.toString(16).padStart(2, "0")).join("");
+                  try {
+                    const s = await Promise.race([
+                      eth.request({ method: "personal_sign", params: [msgHex, walletAddr] }),
+                      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("sign-timeout")), 30_000)),
+                    ]);
+                    if (typeof s === "string" && /^0x[0-9a-fA-F]{130}$/.test(s)) signature = s;
+                  } catch { /* rejected — name-only identity */ }
+                }
+              }
+              const res = await fetch("/api/practice", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  runToken: d.runToken,
+                  name: nameRef.current,
+                  address: walletAddr ?? undefined,
+                  signature,
+                  ts: proofTs,
+                }),
+              });
+              const p = (await res.json()) as { ok?: boolean; banked?: number };
+              if (p?.ok && typeof p.banked === "number") {
+                setPracticeNote(`PRACTICE · +${p.banked} WEIGHT BANKED TODAY`);
+              }
+            })().catch(() => {});
+          }
+          // H3 WRECKAGE: freeze this death into the device's local map —
+          // the exact fall point, visible to future climbers of this level
+          const eng = engineRef.current;
+          if (eng) {
+            const wreck: Wreck = {
+              x: eng.px + 17,
+              y: eng.py + 20,
+              cause: r.cause ?? "fell",
+              ts: Date.now(),
+            };
+            wreckDBRef.current = recordWreck(wreckDBRef.current, seedRef.current, wreck);
+            saveWreckDB(wreckDBRef.current);
+            wrecksRef.current = wrecksFor(wreckDBRef.current, seedRef.current);
+          }
+          setResult(r);
+          setPhase("dead");
+          ghostRecRef.current.stop(); // P7.2: stream ends at the death tick
+          // P2: the run's true end — fold it into the lifetime ledger and
+          // save the stream as this device's own ghost when it beats the old one.
+          recordFinishedRun(r, true);
+          maybeSaveSelfGhost(d, r.candlesPassed, r.score);
+          setHud({ score: r.score, combo: 0, candles: r.candlesPassed });
+          // P7.1: local verdict at death — purely client-side, never submitted.
+          // P7.3: the duel verdict is final here; the local W-L-D tally folds once.
+          const bot = botRef.current;
+          const dc = duelRef.current;
+          if (dc) {
+            const v = duelVerdict(dc, { score: r.score, candlesPassed: r.candlesPassed });
+            setVerdict(v.line);
+            setDuelTally((t) => {
+              const nt = applyDuelResult(t, v.outcome);
+              try { localStorage.setItem(DUEL_TALLY_KEY, JSON.stringify(nt)); } catch { /* private mode */ }
+              return nt;
+            });
+          } else if (vsBotRef.current && bot) {
+            setVerdict(rivalVerdict(r.candlesPassed, bot.bestCandles).line);
+          }
+          if (r.score > Number(localStorage.getItem(BEST_KEY) ?? 0)) {
+            localStorage.setItem(BEST_KEY, String(r.score));
+            setBest(r.score);
+          }
+          // refresh today's top so the rival line + board stay fresh
+          fetch(`/api/leaderboard?date=${d.seed.date}`)
+            .then((res) => res.json())
+            .then((b) => setTopBoard(b.entries ?? []))
+            .catch(() => {});
+        },
+      },
+      mut.mods,
+      d.seed.date + d.seed.symbol, // W4: world-2 sky seed (same string as the level)
+    );
+  }, []);
+
+  // Merge-back wave 1 (game-first entry): the landing surface IS the game. A
+  // fresh engine holds the level's exact start pose; the render loop draws it
+  // behind the entry card without ever stepping it, so the terrain is visible
+  // and playable (tap/Space starts from this same pose) above the fold. startRun
+  // replaces it with the live run engine built from the same data + seed.
+  useEffect(() => {
+    if (phase !== "ready" || !data || !mutation) return;
+    engineRef.current = buildEngine(data, mutation);
+  }, [phase, data, mutation, buildEngine]);
+
+  const startRun = useCallback(() => {
+    if (!data || !mutation || data.candles.length === 0) return;
+    // P2: RETRY from the summit panel abandons a graduated engine that will
+    // never fire onDeath — record it into the ledger + self-ghost first.
+    // (A run that graduated and CONTINUED records once, at its eventual death.)
+    const prevEng = engineRef.current;
+    if (prevEng && prevEng.graduated && !runRecordedRef.current) {
+      recordFinishedRun(
+        {
+          score: Math.floor(prevEng.score),
+          candlesPassed: prevEng.candlesPassed,
+          bestStreak: prevEng.bestStreak,
+          candleIndex: prevEng.candlesPassed,
+          graduated: true,
+          world2: prevEng.world2,
+        },
+        false,
+      );
+      maybeSaveSelfGhost(data, prevEng.candlesPassed, Math.floor(prevEng.score));
+    }
+    runRecordedRef.current = false; // fresh run — the ledger guard resets
+    applyPause(false); // a restart is always an unpause
+    unlockAudio();
+    const eng = buildEngine(data, mutation);
+    // first-run onboarding hints: show during the player's first 2 runs ever
+    const runs = Number(localStorage.getItem(RUNS_KEY) ?? 0);
+    eng.showHints = runs < 2;
+    localStorage.setItem(RUNS_KEY, String(runs + 1));
+    engineRef.current = eng;
+    // P7.1: a fresh rival per run — same candles + same seed ⇒ the SAME
+    // deterministic level build (reused, never forked); the bot restarts
+    // with a fresh personality-consistent plan on every human retry.
+    botRef.current = vsBotRef.current
+      ? new RivalBot(data.candles, seedRef.current, rivalCharId, mutation.mods)
+      : null;
+    setVerdict(null);
+    // P7.2: record THIS run's position stream (stopped at death; flushed at submit)
+    ghostRecRef.current.start();
+    // P7.3: while a duel is loaded, its challenge owns the replay slot —
+    // every retry re-pins the challenger's climb (terrain ghosts stand down)
+    if (duelRef.current) ghostRef.current = challengeToGhost(duelRef.current);
+    setHud({ score: 0, combo: 0, candles: 0 });
+    setResult(null);
+    setRank(null);
+    setLaneNote(null);
+    setMintState("idle"); // fresh run — the mint detour resets with it
+    setMintMsg(null);
+    setMintUrl(null);
+    setGraduated(false);
+    setWorld2(false);
+    setPracticeNote(null);
+    setVaultMsg(null);
+    celebrateRef.current = 0; // ART V4: a fresh run resets the celebration clock
+    setPhase("running");
+    lastRef.current = performance.now();
+    accRef.current = 0;
+  }, [data, mutation, buildEngine, rivalCharId, recordFinishedRun, maybeSaveSelfGhost, applyPause]);
+
+  // W4: from the GRADUATED panel, continue into the post-graduation buyback
+  // world — doubled gains, endless procedural sky. The run keeps its score.
+  const enterWorld2 = useCallback(() => {
+    const eng = engineRef.current;
+    if (!eng || !eng.graduated || eng.world2) return;
+    eng.enterWorld2();
+    setWorld2(true);
+    setPhase("running");
+    lastRef.current = performance.now();
+    accRef.current = 0;
+  }, []);
+
+  // P2.3 (H2): weather is derived from the SAME closed candles that shaped the
+  // terrain — pure, deterministic, render-only. Consumed by renderV2 (wind
+  // sway/streaks, volume fog, tremor) and surfaced in the HUD when it matters.
+  const weather = useMemo(
+    () => (data ? deriveWeather(data.candles, data.seed.date + data.seed.symbol) : null),
+    [data],
+  );
+  const biomeId = useMemo<BiomeId | undefined>(
+    () => (data ? deriveBiome(data.candles, data.seed.date + data.seed.symbol).id : undefined),
+    [data],
+  );
+
+  // main loop
+  useEffect(() => {
+    // "ready" renders the game-first attract pose (wave 1): draw only — the
+    // fixed-step block below never advances the engine until a run starts.
+    if (phase !== "ready" && phase !== "running" && phase !== "dead" && phase !== "graduated") return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const resize = () => {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      // V-PHASE V-1: contain-fit the 800×480 world — never crop, never stretch.
+      // The old width-locked scale overflowed viewport height on wide desktops
+      // (ground row rendered below the fold) and left an unframed strip on
+      // portrait phones. Landscape: leftover ≈ 0 (unchanged composition).
+      // Portrait: the band is bottom-weighted (62% of the leftover above it)
+      // so the climber reads with sky overhead and crumble debris keeps
+      // falling through the open space below the band.
+      // Wave 1 (game-first entry): on the READY landing surface the band
+      // weights the other way (30%) so the level + climber sit ABOVE the
+      // bottom-anchored entry card instead of behind it. Play phases keep the
+      // tuned 62%; landscape leftovers ≈ 0 make this a no-op on desktop.
+      const weight = phase === "ready" ? 0.3 : 0.62;
+      const s = Math.min(rect.width / VIEW_W, rect.height / VIEW_H);
+      const ox = (rect.width - VIEW_W * s) / 2;
+      const oy = (rect.height - VIEW_H * s) * weight;
+      fitRef.current = { dpr, w: rect.width, h: rect.height, s, ox, oy };
+      ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * ox, dpr * oy);
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const step = (now: number) => {
+      const e = engineRef.current;
+      if (!e) return;
+      let dt = (now - lastRef.current) / 1000;
+      lastRef.current = now;
+      dt = Math.min(0.1, dt);
+      // ART V4: the celebration clock runs on the RAF while the GRADUATED
+      // panel is up (the engine itself is frozen — its time must not move).
+      if (phase === "graduated") celebrateRef.current += dt;
+      // P2 pause: while paused mid-run, time does NOT accumulate — the
+      // fixed-step block (engine + bot + ghost recorder) freezes on the same
+      // clock; the render below keeps drawing the frozen frame every RAF.
+      if (!(pausedRef.current && phase === "running")) accRef.current += dt;
+      const FIXED = 1 / 60;
+      while (accRef.current >= FIXED) {
+        // "graduated" pauses the simulation while the celebration panel is up
+        if (phase === "running" || phase === "dead") e.step(FIXED);
+        // P7.1: the rival steps on the SAME fixed-timestep clock inside this
+        // SAME RAF loop (never a second loop). Frozen while any panel is up,
+        // so the verdict numbers freeze with the human's run.
+        if (phase === "running" && vsBotRef.current) botRef.current?.tick(FIXED);
+        // P7.2: recorder samples every 2nd fixed tick (30 Hz) while the run is live
+        if (phase === "running") ghostRecRef.current.tick(e.px, e.py);
+        accRef.current -= FIXED;
+      }
+      // V-1: full-canvas clear in SCREEN space — the renderer re-fills the
+      // world band itself; letterbox areas stay transparent (CSS bg shows)
+      // and any decor drawn beyond the band never smears between frames.
+      const fit = fitRef.current;
+      ctx.save();
+      ctx.setTransform(fit.dpr, 0, 0, fit.dpr, 0, 0);
+      ctx.clearRect(0, 0, fit.w, fit.h);
+      ctx.restore();
+
+      const bot = vsBotRef.current ? botRef.current : null;
+      // P7.2 + P2 self-ghost: replay priority — duel challenge > champion
+      // ghost (server) > this device's own best (local). One GhostView out.
+      const ghostSrc = ghostRef.current ?? selfGhostRef.current;
+      // P7.2: ghost replay — position lookup by the human engine's own clock
+      const gv: GhostView | null =
+        ghostOnRef.current && ghostSrc && (phase === "ready" || phase === "running" || phase === "dead" || phase === "graduated")
+          ? ghostViewAt(ghostSrc, e.time)
+          : null;
+      // CAMERA-FRAME v3: the frame problem is solved in the ENGINE (single-lerp
+      // camera with a soft ground-line guard) — the render path is the ORIGINAL
+      // unclipped, un-zoomed compose (owner: zoom/crop made the frame lag and
+      // feel unnatural). Renderers draw under the resize-time fit transform and
+      // save/restore internally. (Biome layers ride the v2 renderer — render-only.)
+      if (v2) renderV2(ctx, e, seedRef.current, weather ?? undefined, wrecksRef.current, mutationIdRef.current, charIdRef.current, bot, gv, biomeId, peakIdxRef.current, celebrateRef.current, settingsRef.current.colorblind, settingsRef.current.reducedMotion);
+      else render(ctx, e, seedRef.current, mutationIdRef.current, bot, gv); // debug-only path (?renderer=v1): legacy renderer, a11y layers are v2-only by design
+      rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener("resize", resize);
+    };
+  }, [phase, v2, weather, biomeId]);
+
+  // P3.2: mirror mutation state → ref consumed by the RAF render loop
+  useEffect(() => {
+    mutationIdRef.current = mutation?.id;
+  }, [mutation]);
+
+  // input
+  useEffect(() => {
+    const down = (ev: KeyboardEvent) => {
+      if (ev.repeat) return;
+      // G2 owner note: typing a name must never jump or restart the run
+      const tag = (ev.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      // P2 pause: P or Escape freezes/resumes a live run; while frozen the
+      // game ignores jump/start so nothing moves behind the pause dialog.
+      if (ev.key === "p" || ev.key === "P" || ev.key === "Escape") {
+        if (phase === "running") { ev.preventDefault(); togglePause(); }
+        return;
+      }
+      if (pausedRef.current && phase === "running") return;
+      // P3.6 RUSH (desktop): hold Shift = faster climb + 25% gains (opt-in risk)
+      // G5 (129-c #10): phase-gated like the mobile RUSH button — pressing
+      // Shift on the ready/dead screens used to mark usedRushRef for the NEXT
+      // run, silently forfeiting DIAMOND HANDS without any rush usage.
+      if (ev.key === "Shift") {
+        if (phase === "running") {
+          usedRushRef.current = true; // honest DIAMOND HANDS tracking
+          engineRef.current?.pressRush();
+        }
+        return;
+      }
+      if (ev.code === "Space" || ev.code === "ArrowUp" || ev.code === "KeyW") {
+        if (showTutorialRef.current) return; // tutorial handles Space
+        ev.preventDefault();
+        if (phase === "ready" || phase === "dead") startRun();
+        else if (phase === "graduated") {
+          // Space on the graduated panel = enter world 2 (tap-to-continue parity);
+          // let focused buttons/inputs handle Space themselves.
+          const tag = (ev.target as HTMLElement | null)?.tagName;
+          if (tag === "BUTTON" || tag === "INPUT") return;
+          enterWorld2();
+        }
+        else engineRef.current?.press();
+      }
+    };
+    const up = (ev: KeyboardEvent) => {
+      // release rush unconditionally — even after alt-tab or input focus changes
+      if (ev.key === "Shift") engineRef.current?.releaseRush();
+      if (ev.code === "Space" || ev.code === "ArrowUp" || ev.code === "KeyW") engineRef.current?.release();
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
+  }, [phase, startRun, enterWorld2, togglePause]);
+
+  const onPointerDown = (ev: React.PointerEvent) => {
+    // G2 owner note: the death/ready panels live inside the stage — never hijack
+    // clicks meant for the name input or any other control inside them
+    if ((ev.target as HTMLElement | null)?.closest("input,button,a,select,textarea,label")) return;
+    ev.preventDefault();
+    if (pausedRef.current && phase === "running") return; // frozen — the pause dialog owns the stage
+    if (phase === "ready") { if (!showTutorialRef.current) startRun(); return; }
+    engineRef.current?.press();
+  };
+  const onPointerUp = () => engineRef.current?.release();
+
+  const submitScore = async () => {
+    // tokenless terrain (synthetic fallback) is unscored — never POST it
+    if (!result || !data || submitting || !data.runToken) return;
+    // The interval the terrain was actually served with — G5 (129-c #7):
+    // every seed now carries a concrete timeframe that matches its signed
+    // token (stocks pin "1w", CoinGecko "1d", launchpad "1w"), so the fallback
+    // below is legacy-defensive only. Proof messages and board/ghost refreshes
+    // name the PLAYED interval, never the raw selector state.
+    const subIv: GameInterval = isInterval(data.seed.interval) ? data.seed.interval : tf;
+    setSubmitting(true);
+    try {
+      const finalName = (name.trim() || "ANON").slice(0, 14);
+      localStorage.setItem(NAME_KEY, finalName);
+      // LAW 1.2 hardening — official lane needs an ownership proof: the wallet
+      // personal_signs the canonical run-binding message before the POST. The
+      // clamps here mirror board-validation exactly (the server verifies the
+      // signature against the CLAMPED entry values, byte-for-byte). No provider,
+      // user rejection, or a 30s popup timeout ⇒ post without proof: the run
+      // lands on the honestly-labeled GUEST board and play is never blocked.
+      const walletAddr = localStorage.getItem(WALLET_ADDRESS_KEY);
+      let signature: string | undefined;
+      let proofTs: number | undefined;
+      if (walletAddr && isValidAddress(walletAddr)) {
+        const eth = (window as unknown as { ethereum?: { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum;
+        if (eth) {
+          proofTs = Date.now();
+          const msg = buildProofMessage(
+            {
+              score: Math.floor(result.score),
+              candlesPassed: Math.floor(result.candlesPassed),
+              bestStreak: Math.max(0, Math.min(999, Math.floor(result.bestStreak))),
+              date: data.seed.date,
+              interval: subIv,
+              wallet: walletAddr.toLowerCase(),
+            },
+            proofTs,
+          );
+          const msgHex = "0x" + [...new TextEncoder().encode(msg)].map((b) => b.toString(16).padStart(2, "0")).join("");
+          // popup must not pin the panel forever: 30s → give up, post as guest
+          let timer: ReturnType<typeof setTimeout> | null = null;
+          try {
+            const s = (await Promise.race([
+              eth.request({ method: "personal_sign", params: [msgHex, walletAddr] }),
+              new Promise<never>((_, rej) => {
+                timer = setTimeout(() => rej(new Error("sign-timeout")), 30_000);
+              }),
+            ])) as unknown;
+            if (typeof s === "string" && /^0x[0-9a-fA-F]{130}$/.test(s)) signature = s;
+          } catch {
+            // rejected / timed out — guest lane, note below explains honestly
+          } finally {
+            if (timer) clearTimeout(timer);
+          }
+        }
+      }
+      const res = await fetch("/api/leaderboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: finalName, score: result.score, candlesPassed: result.candlesPassed,
+          bestStreak: result.bestStreak, mutation: mutation?.id,
+          symbol: data.seed.symbol, date: data.seed.date,
+          // E2.2: optional wallet link so the run also builds airdrop weights.
+          // Display-only value from WalletChip — absent = ledger stays identity-only.
+          // (JSON.stringify drops undefined — the field is simply absent when unlinked.)
+          address: walletAddr ?? undefined,
+          // LAW 1.2 hardening: ownership proof (absent = guest lane, by design)
+          signature: signature,
+          ts: proofTs,
+          ref: localStorage.getItem(REF_KEY) ?? undefined, // E5.5: opaque referral stamp
+          runToken: data.runToken,
+          // LU-8: per-submission unique nonce — prevents run-token replay
+          nonce: crypto.randomUUID().replace(/-/g, "") + Date.now().toString(36),
+        }),
+      });
+      const j = await res.json();
+      if (typeof j.rank === "number") setRank(j.rank);
+      if (j.board === "official" || j.board === "guest") setSubmittedBoard(j.board);
+      // honest lane note: server-issued degrade reason, or a plain message when
+      // a linked wallet skipped signing (no provider / popup rejected / timeout)
+      setLaneNote(
+        typeof j.note === "string" && j.note
+          ? j.note
+          : j.board === "guest" && isValidAddress(walletAddr ?? "")
+            ? "no signature — run posted to the GUEST board"
+            : null,
+      );
+      // LU-7: if the server flagged this submission as a statistical anomaly,
+      // surface a non-blocking toast (the score was still accepted)
+      if (j.flagged) {
+        toast.info("High score flagged for review — our team verifies top scores.");
+      }
+      const b = await fetch(`/api/leaderboard?date=${data.seed.date}&interval=${subIv}`).then((r) => r.json());
+      setBoard(b.entries ?? []);
+      setTopBoard(b.entries ?? []);
+      // LU-14: refresh official entries from the combined response too
+      if (b.official && b.official.length > 0) {
+        setOfficialBoard(b.official);
+        if (b.season) setOfficialSeason(b.season);
+      }
+      // Option B: refresh the official lane too (the run landed there when a
+      // wallet is linked — best run per wallet is kept server-side)
+      if (isValidAddress(localStorage.getItem(WALLET_ADDRESS_KEY))) {
+        await fetch(`/api/leaderboard?date=${data.seed.date}&interval=${subIv}&board=official`)
+          .then((r) => r.json())
+          .then((ob) => {
+            setOfficialBoard(ob.entries ?? []);
+            if (ob.season) setOfficialSeason(ob.season);
+          })
+          .catch(() => {});
+      }
+      // P7.2: submit the run's ghost with the SAME verified run-token
+      // (best-effort — a ghost failure must never fail the score submission;
+      // the ghost is cosmetic and the next load simply replays nothing).
+      const samples = ghostRecRef.current.flush();
+      if (samples.length > 0) {
+        fetch("/api/ghosts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            runToken: data.runToken, name: finalName, charId: charIdRef.current,
+            candlesPassed: result.candlesPassed, samples,
+          }),
+        })
+          .then((r) => { if (r.ok) return r.json(); throw new Error("ghost rejected"); })
+          .then(() => fetch(`/api/ghosts?symbol=${data.seed.symbol}&date=${data.seed.date}&interval=${subIv}`))
+          .then((r) => r.json())
+          .then((g: { ghosts?: GhostEntry[] }) => {
+            const best = bestGhost(g.ghosts ?? []);
+            ghostRef.current = best;
+            setGhostEntry(best);
+          })
+          .catch(() => {});
+      }
+    } catch {
+      // Same incident class as CANDLE-CLIMBER-2 (unhandled rejection): a failed
+      // POST / JSON parse must not escape as an unhandled promise rejection.
+      // Score stays in local best; the panel keeps working for another try.
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Death Card mint (TESTNET) — architecture B: the SERVER minter pays testnet
+  // gas; the wallet only personal_signs the purpose-separated mint message.
+  // Honest states end to end: a rejected/absent provider never blocks play and
+  // every failure says what actually happened. Mirror of the board-proof clamps.
+  const mintDeathCard = async () => {
+    if (!result || !data || !data.runToken || mintState === "signing" || mintState === "sending" || mintState === "confirming") return;
+    const walletAddr = localStorage.getItem(WALLET_ADDRESS_KEY);
+    if (!walletAddr || !isValidAddress(walletAddr)) {
+      setMintState("error");
+      setMintMsg("connect a wallet first — minting is wallet-only (guest play is never affected)");
+      return;
+    }
+    setMintState("signing");
+    setMintMsg(null);
+    try {
+      const eth = (window as unknown as { ethereum?: { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum;
+      if (!eth) throw new Error("no wallet provider in this browser");
+      const ts = Date.now();
+      const subIv: GameInterval = isInterval(data.seed.interval) ? data.seed.interval : tf;
+      const msg = buildMintProofMessage(
+        {
+          score: Math.floor(result.score),
+          candlesPassed: Math.floor(result.candlesPassed),
+          bestStreak: Math.max(0, Math.min(999, Math.floor(result.bestStreak))),
+          date: data.seed.date,
+          interval: subIv,
+          wallet: walletAddr.toLowerCase(),
+        },
+        ts,
+      );
+      const msgHex = "0x" + [...new TextEncoder().encode(msg)].map((b) => b.toString(16).padStart(2, "0")).join("");
+      // popup must not pin the panel forever: 30s → give up with honest copy
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      let signature: string;
+      try {
+        const s = (await Promise.race([
+          eth.request({ method: "personal_sign", params: [msgHex, walletAddr] }),
+          new Promise<never>((_, rej) => {
+            timer = setTimeout(() => rej(new Error("sign-timeout")), 30_000);
+          }),
+        ])) as unknown;
+        if (typeof s !== "string" || !/^0x[0-9a-fA-F]{130}$/.test(s)) throw new Error("wallet returned no usable signature");
+        signature = s;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+      setMintState("sending");
+      const res = await fetch("/api/deathcard/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          runToken: data.runToken,
+          address: walletAddr,
+          signature,
+          ts,
+          score: Math.floor(result.score),
+          candlesPassed: Math.floor(result.candlesPassed),
+          bestStreak: Math.max(0, Math.min(999, Math.floor(result.bestStreak))),
+        }),
+      });
+      const j = (await res.json()) as {
+        ok?: boolean; already?: boolean; status?: string; txHash?: string;
+        tokenId?: number; explorerUrl?: string; error?: string; note?: string;
+      };
+      if (!res.ok || !j.ok) {
+        setMintState("error");
+        setMintMsg(j.error ? (j.note ? `${j.error} — ${j.note}` : j.error) : "mint request failed");
+        return;
+      }
+      // mined/pending/already — a pending answer is polled to a final state
+      let final = j;
+      if (final.status === "pending" && final.txHash) {
+        setMintState("confirming");
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const st = await fetch(`/api/deathcard/claim?txHash=${final.txHash}`).then((r) => r.json()) as { status?: string; tokenId?: number; explorerUrl?: string };
+          if (st.status === "mined" || st.status === "failed") { final = { ...j, ...st }; break; }
+        }
+      }
+      if (final.status === "failed") {
+        setMintState("error");
+        setMintMsg("the mint transaction failed on-chain — nothing was charged to you");
+        return;
+      }
+      setMintState("minted");
+      setMintUrl(final.explorerUrl ?? (final.txHash ? `https://explorer.testnet.chain.robinhood.com/tx/${final.txHash}` : null));
+      setMintMsg(final.already ? "already minted — one card per run, forever" : typeof final.tokenId === "number" ? `minted · CCDC #${final.tokenId}` : "minted");
+    } catch (err) {
+      setMintState("error");
+      const m = err instanceof Error ? err.message : "";
+      setMintMsg(m.includes("sign-timeout") ? "signature popup timed out — try again when ready" : m || "mint failed — try again");
+    }
+  };
+
+  // P7.3: turn THIS completed run into an async duel — the code IS the
+  // invitation (?duel=CODE). The share text rides the P3.1 rivalry tag when
+  // one is typed, so the mockery loop and the duel loop are the same loop.
+  const createDuel = async () => {
+    if (!result || !data || !data.runToken || duelBusy || duelCode) return;
+    setDuelBusy(true);
+    try {
+      const finalName = (name.trim() || "ANON").slice(0, 14);
+      const res = await fetch("/api/duels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          runToken: data.runToken, name: finalName, charId: charIdRef.current,
+          score: result.score, candlesPassed: result.candlesPassed,
+          bestStreak: result.bestStreak, samples: ghostRecRef.current.flush(),
+        }),
+      });
+      const j = (await res.json()) as { ok?: boolean; code?: string };
+      if (res.ok && j.ok && j.code) {
+        setDuelCode(j.code);
+        const tag = normalizeRivalTag(rival);
+        if (rival.trim()) localStorage.setItem(RIVAL_KEY, rival.trim());
+        const link = `${duelUrl(window.location.origin, j.code)}${shareRef(finalName)}`; // E5.5: invite carries the ref
+        const text = tag
+          ? `${tag} you're up — beat ${result.score} on today's ${data.seed.symbol} chart: ${link}`
+          : `beat my ${result.score} on today's ${data.seed.symbol} chart: ${link}`;
+        try {
+          await navigator.clipboard.writeText(text);
+          setDuelCopied(true);
+          setTimeout(() => setDuelCopied(false), 1600);
+        } catch { /* clipboard denied — the code still shows for manual share */ }
+      }
+    } catch {
+      // honest failure: the button stays available for another try
+    } finally {
+      setDuelBusy(false);
+    }
+  };
+
+  const downloadCard = async () => {
+    if (!result || !data) return;
+    // Option B: the card's rival reads THIS device's lane (official with a
+    // linked wallet — empty official lane = no rival stamped, never guest rows)
+    const top = (hasWallet ? officialBoard : topBoard)[0];
+    const rivalGap = top && top.score > result.score ? top.score - result.score : 0;
+    // P3.1: honor the typed rival handle — invalid input simply omits the stamp
+    const challenge = normalizeRivalTag(rival);
+    if (rival.trim()) localStorage.setItem(RIVAL_KEY, rival.trim());
+    const blob = await makeDeathCard({
+      result, symbol: data.seed.symbol, date: data.seed.date, best,
+      mutationName: mutation && mutation.id !== "clean" ? mutation.name : undefined,
+      rivalName: top && top.score > result.score ? top.name : undefined,
+      rivalGap: rivalGap || undefined,
+      isTop: !top || top.score <= result.score,
+      realMovePct: stats?.changePct,
+      difficulty: stats?.difficulty,
+      rivalTag: challenge ?? undefined,
+      interval: data.seed.interval,
+      duelCode: duelCode ?? undefined, // P7.3: the card doubles as the invitation
+    });
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `candle-climber-${result.score}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    // P3.1: the mockery loop — share text tags the rival so their audience sees it.
+    // E5.5: the text also carries a measurable game link (sharer's name as ref).
+    const shareText = challenge
+      ? `${challenge} you're up — beat ${result.score} on today's ${data.seed.symbol} chart — ${shareUrl(name)}`
+      : `Candle Climber — ${shareUrl(name)}`;
+    if (navigator.share && navigator.canShare?.({ files: [new File([blob], "card.png", { type: "image/png" })] })) {
+      try {
+        await navigator.share({ files: [new File([blob], "card.png", { type: "image/png" })], title: shareText });
+      } catch { /* user cancelled */ }
+    }
+  };
+
+  const toggleMute = () => {
+    const m = !muted;
+    setMutedState(m);
+    // Sync to centralized settings store
+    updateSettings({ muted: m });
+    unlockAudio(); // create context first so suspend/resume has a target
+    setMuted(m);
+    if (!m) setVolume(settings.volume);
+  };
+
+  // Sync audio state when settings change externally (e.g. from SettingsPanel)
+  useEffect(() => {
+    if (settings.muted !== muted) {
+      setMutedState(settings.muted);
+      setMuted(settings.muted);
+    }
+    setVolume(settings.volume);
+  }, [settings.muted, settings.volume]);
+
+  // Mirror the ghost / rival-bot toggles from the settings store into the
+  // RAF refs + UI state — SettingsPanel writes the store, the loop reads refs.
+  useEffect(() => {
+    setGhostOn(settings.ghostOn);
+    ghostOnRef.current = settings.ghostOn;
+    setVsBot(settings.botOn);
+    vsBotRef.current = settings.botOn;
+  }, [settings.ghostOn, settings.botOn]);
+
+  // H4: the report is designed to travel — copy the episode verbatim
+  // E5.5: the copied text lands on a ?ref= link so episode-driven visits count
+  const copyReport = () => {
+    if (!report) return;
+    const text = `CANDLE CLIMBER — DAILY REPORT ${report.date}\n${report.narrative.join("\n")}\n${shareUrl(name)}`;
+    navigator.clipboard?.writeText(text).then(() => {
+      setReportCopied(true);
+      setTimeout(() => setReportCopied(false), 1600);
+    }).catch(() => {});
+  };
+
+  // LU-15: community score moderation — report a suspicious leaderboard entry.
+  // Fire-and-forget with a toast confirmation; the report feeds the /ops queue.
+  const reportScore = useCallback(async (e: BoardEntry) => {
+    const reason = window.prompt(`Report ${e.name}'s score (${e.score.toLocaleString()})?\nReason (optional):`);
+    if (reason === null) return; // user clicked Cancel
+    try {
+      const res = await fetch("/api/score-report", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: e.name,
+          score: e.score,
+          date: e.date,
+          board: e.board ?? "guest",
+          reason: reason.trim(),
+          reporter: name.trim() || undefined,
+        }),
+      });
+      if (res.ok) toast.success("Score reported for review — thank you.");
+      else toast.error("Report failed — try again later.");
+    } catch {
+      toast.error("Report failed — try again later.");
+    }
+  }, [name]);
+
+  const seedLabel = data ? `${data.seed.symbol} · ${data.seed.date}` : "";
+  // Merge-back wave 1: provenance badge state — flips whenever the seed the
+  // level-source pipeline produced changes source (feed chain downgrade on the
+  // server, or the client's offline synthetic fallback).
+  const prov = data ? provenanceLabel(data.seed.source, data.seed.symbol) : null;
+  const stats = useMemo(() => marketStats(data?.candles ?? []), [data]);
+  const weatherChip = v2 && weather && (weather.wind >= 0.15 || weather.fog >= 0.3)
+    ? `${weather.windLabel} · ${weather.fogLabel}`
+    : null;
+  const canSubmit = Boolean(data?.runToken) && !archive; // archive = practice (H1)
+  // Death Card mint gate — wallet-only + today's runs only (the SERVER enforces
+  // both again; this gate just keeps the button honest in the UI).
+  const canMint = canSubmit && hasWallet && data?.seed.source !== "vibe-launch" && data?.seed.date === new Date().toISOString().slice(0, 10);
+  // Death Card mint UI — shared by the dead + graduated panels. The button
+  // lives in the action row, the honest status line right under it. Runs that
+  // can't mint (guest / archive / vibe-launch) simply never see the button.
+  const mintBusy = mintState === "signing" || mintState === "sending" || mintState === "confirming";
+  const mintBtn = canMint ? (
+    <button
+      className="cc-btn"
+      onClick={mintDeathCard}
+      disabled={mintBusy}
+      title="mint this run's Death Card as a TESTNET NFT — free: the server pays testnet gas; wallet-only, one card per run, no value implied"
+    >
+      {mintState === "signing" ? "SIGN…" : mintState === "sending" ? "SENDING…" : mintState === "confirming" ? "CONFIRMING…" : mintState === "minted" ? "MINTED ✓" : "MINT (TESTNET)"}
+    </button>
+  ) : null;
+  const mintNote = canMint && mintMsg ? (
+    <p className="cc-vault-note" role="status">
+      {mintState === "minted" && mintUrl ? (
+        <a href={mintUrl} target="_blank" rel="noreferrer">{mintMsg} ↗</a>
+      ) : (
+        mintMsg
+      )}
+    </p>
+  ) : null;
+  const unscoredMsg = archive ? ARCHIVE_MSG : UNSCORED_MSG;
+  // P3.5 gates: timeframe chips show on crypto dailies only — stock rails have
+  // no intraday feed, launch terrain is derived, archive stays weekly (V1).
+  const canPickTf = Boolean(
+    data && !archive && !duel &&
+    data.seed.source !== "stooq" && data.seed.source !== "yahoo" &&
+    data.seed.source !== "vibe-launch" && data.seed.source !== "robinhood",
+  );
+  // Option B: rival/lead context follows THIS device's lane (official with a
+  // linked wallet, guest otherwise) — both boards stay labeled on the panel.
+  const myLane = hasWallet ? officialBoard : topBoard;
+  const miniOfficial = hasWallet && officialBoard.length > 0;
+  const top = myLane[0];
+  const rivalGap = result && top && top.score > result.score ? top.score - result.score : 0;
+
+  return (
+    <div className="cc-root" onContextMenu={(e) => e.preventDefault()}>
+      {/* HUD */}
+      <div className="cc-hud">
+        <div className="cc-hud-left">
+          {/* Merge-back wave 1: provenance badge — always-visible terrain-source
+              truth (REAL FEED <symbol> / SYNTHETIC FALLBACK), driven by the seed
+              the level-source pipeline produced. Flips the moment a fallback
+              serves; synthetic terrain is unscored (honest, per pack §8). */}
+          <div
+            className={`cc-chip cc-prov${prov ? (prov.kind === "live" ? " cc-prov-real" : prov.kind === "onchain" ? " cc-prov-onchain" : " cc-prov-synth") : " cc-prov-pending"}`}
+            role="status"
+            title={
+              prov
+                ? prov.kind === "live"
+                  ? "today's terrain was built from the real feed that served this level"
+                  : prov.kind === "onchain"
+                    ? "no OHLC history for this stock — the terrain shape is derived and anchored to the official Robinhood Chain on-chain price"
+                    : "live feeds unreachable — deterministic synthetic terrain; scoring disabled"
+                : "resolving terrain source…"
+            }
+          >
+            {prov ? (
+              <>
+                <span className="cc-prov-long">{prov.long}</span>
+                <span className="cc-prov-short">{prov.short}</span>
+              </>
+            ) : (
+              "SOURCE …"
+            )}
+          </div>
+          {/* W6: official Robinhood Chain verification — the live Chainlink feed
+              read on-chain for this stock level. Fresh + terrain agrees = the
+              green check; otherwise the honest delta (or STALE) is shown. */}
+          {data?.seed.onchain && (
+            <div
+              className={`cc-chip ${data.seed.onchain.verified ? "cc-chip-lime" : "cc-chip-mut"}`}
+              title={`official Chainlink feed ${data.seed.onchain.feed} on Robinhood Chain (chain ${data.seed.onchain.chainId}) · round ${data.seed.onchain.roundId} · updated ${new Date(data.seed.onchain.updatedAt * 1000).toISOString()} · resolved from ${data.seed.onchain.feedSource}`}
+            >
+              ON-CHAIN {data.seed.symbol} ${data.seed.onchain.price.toFixed(2)}
+              {data.seed.onchain.verified
+                ? " ✓"
+                : data.seed.onchain.stale
+                  ? " STALE"
+                  : data.seed.onchain.deltaPct !== null
+                    ? ` Δ${data.seed.onchain.deltaPct >= 0 ? "+" : ""}${data.seed.onchain.deltaPct.toFixed(1)}%`
+                    : ""}
+            </div>
+          )}
+          <div className="cc-chip cc-chip-lime">{seedLabel}</div>
+          {mutation && mutation.id !== "clean" && phase !== "loading" && (
+            <div className="cc-chip cc-chip-mut" title={mutation.tagline}>{mutation.name}</div>
+          )}
+          {graduated && <div className="cc-chip cc-chip-grad">GRADUATED</div>}
+          {world2 && <div className="cc-chip cc-chip-grad2">POST-GRAD ×2</div>}
+          {!v2 && <div className="cc-chip cc-chip-mut" title="legacy renderer opt-out — /?renderer=v1">RENDER V1 · LEGACY</div>}
+          {weatherChip && <div className="cc-chip cc-chip-weather" title="weather — wind strength follows market volatility · fog follows trading volume">{weatherChip}</div>}
+          {biomeId && biomeId !== "temperate" && data && (
+            <div className="cc-chip cc-chip-biome" title={`environment biome — derived from today's market conditions`}>
+              {deriveBiome(data.candles, data.seed.date + data.seed.symbol).name}
+            </div>
+          )}
+          {archive && <div className="cc-chip cc-chip-arch" title="archive terrain — practice only">ARCHIVE</div>}
+          {/* P7.1: live rival race — local-only numbers, never submitted */}
+          {vsBot && botRef.current && !botRef.current.stopped && (
+            <div className="cc-chip cc-chip-rival" title="rival bot — local simulation, never scored">
+              RIVAL {botRef.current.candles} / YOU {hud.candles}
+            </div>
+          )}
+        </div>
+        <div className="cc-hud-right">
+          {/* P2 pause — a real button in the HUD (touch-reachable); the stage
+              pointerdown handler ignores taps on buttons, so it never jumps */}
+          {phase === "running" && (
+            <button
+              className="cc-chip cc-chip-pausebtn"
+              onClick={togglePause}
+              aria-label="Pause game"
+              title={coarsePointer ? "pause" : "pause — P or Esc"}
+            >
+              PAUSE
+            </button>
+          )}
+          {/* R8: RUSH button for mobile — hold to boost (desktop uses Shift) */}
+          {phase === "running" && coarsePointer && (
+            <button
+              className="cc-chip cc-rush-btn"
+              onPointerDown={(e) => { e.preventDefault(); usedRushRef.current = true; engineRef.current?.pressRush(); }}
+              onPointerUp={(e) => { e.preventDefault(); engineRef.current?.releaseRush(); }}
+              onPointerLeave={() => engineRef.current?.releaseRush()}
+              aria-label="RUSH — hold to climb faster"
+            >
+              RUSH
+            </button>
+          )}
+          <div className="cc-chip cc-chip-score">{hud.score.toLocaleString()}</div>
+          {hud.combo > 1 && <div className="cc-chip cc-chip-combo">x{(1 + Math.min(hud.combo, 12) * 0.5).toFixed(1)}</div>}
+        </div>
+      </div>
+
+      {/* Canvas stage */}
+      <div
+        className="cc-stage"
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+        role="button"
+        aria-label="Game area — tap or press space to jump"
+        tabIndex={0}
+      >
+        <canvas ref={canvasRef} className="cc-canvas" />
+
+        {phase === "loading" && (
+          <div className="cc-overlay"><div className="cc-panel"><p className="cc-loading">LOADING DAILY CHART…</p></div></div>
+        )}
+
+        {/* P2 pause — the run is frozen mid-air; the chart waits for the player.
+            focus lands on this dialog; RESUME restarts the clock debt-free. */}
+        {paused && phase === "running" && (
+          <div className="cc-overlay">
+            <div className="cc-panel cc-panel-pause" ref={pausePanelRef} tabIndex={-1} role="dialog" aria-label="Game paused">
+              <h2 className="cc-pause-head">PAUSED</h2>
+              <p className="cc-pause-sub">the chart is frozen — camera, rival and ghost all wait for you</p>
+              <div className="cc-death-actions">
+                <button className="cc-btn cc-btn-start" onClick={() => applyPause(false)}>RESUME</button>
+                <button className="cc-btn" onClick={startRun}>RESTART RUN</button>
+                {/* Visual QA 2026-10-14: HOME now lives inside the pause overlay —
+                    the old bare footer link was the only way out mid-run and was
+                    invisible there (owner flag). Abandoned runs are simply not
+                    recorded (ledger counts finished runs only — honest). */}
+                <a className="cc-btn cc-btn-ghost cc-btn-home" href="/" aria-label="Quit to home page">
+                  <HomeGlyph size={13} />HOME
+                </a>
+              </div>
+              <p className="cc-pause-keys">
+                {coarsePointer
+                  ? "tap RESUME to keep climbing"
+                  : (<>SPACE = jump · SHIFT = rush · <b className="lime">P / ESC</b> = pause</>)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {phase === "ready" && data && mutation && (
+          // Merge-back wave 1 (game-first entry):
+          // the landing card anchors to the bottom of the LIVE terrain preview
+          // (the canvas now renders the level's start pose) with ONE primary
+          // CTA. Every secondary panel — stats, mutation, how-to, timeframe,
+          // rival/ghost toggles, duel entry, roster, archive, report, top-3 —
+          // folds below the interaction into "WAYS TO PLAY". Reordered and
+          // de-emphasized only; no feature removed.
+          <div className="cc-overlay cc-overlay-ready">
+            <div className="cc-panel cc-panel-entry">
+              <h1 className="cc-title cc-title-entry">CANDLE <span>CLIMBER</span></h1>
+              <p className="cc-tag">the chart is the level</p>
+              <ModeSelector mode={mode} onChange={changeMode} />
+              <div className="cc-daily">
+                <span className="cc-daily-label" title={archive ? "Real history — practice terrain" : "Levels reset at 00:00 UTC"}>{archive ? "ARCHIVE CHART · PRACTICE" : mode === "launchpad" ? "LAUNCHPAD · ON-CHAIN" : mode === "stocks" ? "TODAY'S STOCK · UTC" : "TODAY'S CHART · UTC"}</span>
+                <span className="cc-daily-symbol">{data.seed.symbol}</span>
+                <span className="cc-daily-src">{data.seed.source === "binance" || data.seed.source === "stooq" || data.seed.source === "yahoo" || data.seed.source === "coingecko" ? "live data" : data.seed.source === "vibe-launch" ? "vibe launch" : data.seed.source === "robinhood" ? "official on-chain price" : "synthetic"}</span>
+              </div>
+              {/* P7.3: a duel deep link IS the landing context — stays above the fold */}
+              {duel && (
+                <div className="cc-duel-banner" role="status">
+                  <span className="cc-duel-head">DUEL · {duel.name} SET THE BAR</span>
+                  <span className="cc-duel-target">BEAT <b>{duel.score.toLocaleString()}</b> PTS · {duel.candlesPassed} CANDLES</span>
+                  <span className="cc-duel-note">same chart · {duel.date === utcDateStr() ? "live terrain" : "archive terrain — practice duel"} · record {tallyLabel(duelTally)}</span>
+                </div>
+              )}
+              <button className="cc-btn cc-btn-start cc-cta" onClick={startRun}>START CLIMB</button>
+              <div className="cc-ready-actions">
+                <button className="cc-btn cc-btn-ghost cc-tut-reopen" onClick={() => setShowTutorial(true)}><BookGlyph size={13} />HOW TO PLAY</button>
+                <AchievementsPanel triggerVariant="ghost" triggerSize="sm" triggerClassName="cc-btn cc-btn-ghost" newCount={newAchievements.length} />
+              </div>
+              {best > 0 && <p className="cc-best">PERSONAL BEST <b>{best.toLocaleString()}</b></p>}
+              {currentStreak > 0 && (
+                <p className="cc-streak">🔥 {currentStreak} DAY STREAK</p>
+              )}
+              {/* Visual QA 2026-10-14 (owner flag): the inline how-to paragraph
+                  block is GONE — it duplicated the 5-step tutorial wizard
+                  (HOW TO PLAY re-opens it) and bloated the card enough to
+                  overflow short/mobile viewports. The three facts the wizard
+                  didn't already carry (pause keys, combo cap + camera rule,
+                  graduation ×2) were folded into the wizard steps themselves. */}
+              <details className="cc-more">
+                <summary className="cc-more-summary">
+                  <span className="cc-more-arrow" aria-hidden>▸</span> TERRAIN &amp; OPTIONS
+                </summary>
+                <div className="cc-more-body">
+                  <div className="cc-sec-title">TODAY&apos;S TERRAIN</div>
+                  {stats && (
+                    <div className="cc-realmove" title="the price change across this level's chart — the same candles that built the terrain">
+                      <MiniChart candles={data.candles} />
+                      <div className="cc-realmove-row">
+                        <span>
+                          CHART MOVE <b className={stats.changePct >= 0 ? "up" : "down"}>{fmtPct(stats.changePct)}</b>
+                        </span>
+                        <span className="cc-realmove-sep">·</span>
+                        <span title="difficulty tiers come from the chart's swing size — bigger swings make bigger jumps">
+                          DIFFICULTY <b className={stats.difficulty === "BRUTAL" ? "down" : "up"}>{stats.difficulty}</b>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="cc-mut-banner" title={mutation.tagline}>
+                    <span className="cc-mut-label">MUTATION</span>
+                    <span className={mutation.id === "clean" ? "cc-mut-name" : "cc-mut-name hot"}>{mutation.name}</span>
+                    <span className="cc-mut-tag">{mutation.tagline}</span>
+                  </div>
+                  {/* P3.5 timeframe selector — owner proposal. Crypto dailies only:
+                      stock rails have no intraday feed, launch terrain is derived,
+                      archive stays weekly (V1) — all three hide the chips. */}
+                  <div className="cc-sec-title">MODES &amp; EXTRAS</div>
+                  {canPickTf && (
+                    <div className="cc-tf-row" role="group" aria-label="Chart period — recuts the day's chart into candles">
+                      {INTERVALS.map((iv) => (
+                        <button
+                          key={iv}
+                          className={`cc-tf-chip${tf === iv ? " cc-tf-on" : ""}`}
+                          onClick={() => changeTf(iv)}
+                          aria-pressed={tf === iv}
+                          title={iv === "1w" ? "weekly candles — the classic level" : iv === "1d" ? "daily candles" : iv === "4h" ? "4-hour candles" : "1-hour candles"}
+                        >
+                          {iv.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {canPickTf && (
+                    <p className="cc-vs-note">CHART PERIOD — recuts the day&apos;s chart into candles. Each period is its own terrain and its own board.</p>
+                  )}
+                  {/* P7.1 rival bot — local SOLO/VS toggle. Default SOLO: existing
+                      behavior + QA flows are 100% unchanged; choice persists. The
+                      rival is a local headless engine — zero network, never scored. */}
+                  <div className="cc-tf-row" role="group" aria-label="Rival bot — race a local bot or climb solo">
+                    <button
+                      className={`cc-tf-chip${!vsBot ? " cc-tf-on" : ""}`}
+                      onClick={() => changeVsBot(false)}
+                      aria-pressed={!vsBot}
+                      title="just you and the chart"
+                    >
+                      SOLO
+                    </button>
+                    <button
+                      className={`cc-tf-chip${vsBot ? " cc-tf-on" : ""}`}
+                      onClick={() => changeVsBot(true)}
+                      aria-pressed={vsBot}
+                      title="race a local bot on the same chart"
+                    >
+                      VS BOT
+                    </button>
+                  </div>
+                  <p className="cc-vs-note">VS BOT races a local bot on the same chart — it is never scored.</p>
+                  {vsBot && (
+                    <p className="cc-vs-note" aria-live="polite">
+                      RIVAL: <b>{rivalName}</b> · {rivalPers.label} — local bot, never scored
+                    </p>
+                  )}
+                  {/* P7.2 + P2 ghost replay — the champion's uploaded climb first,
+                      this device's own best as the local fallback. Render-only. */}
+                  <div className="cc-tf-row" role="group" aria-label="Ghost replay">
+                    <button
+                      className={`cc-tf-chip${ghostOn ? " cc-tf-on" : ""}`}
+                      onClick={() => changeGhost(!ghostOn)}
+                      aria-pressed={ghostOn}
+                      title="a translucent replay of the best recorded climb on this terrain — cosmetic only, never scored"
+                    >
+                      {ghostOn ? "GHOST ON" : "GHOST OFF"}
+                    </button>
+                  </div>
+                  {ghostOn && (
+                    <p className="cc-vs-note" aria-live="polite">
+                      GHOST: {duel
+                        ? `${duel.name}'s run · ${duel.candlesPassed} candles — the climb to beat`
+                        : ghostEntry
+                          ? `${getChar(ghostEntry.charId).name} · ${ghostEntry.candlesPassed} candles — champion of this terrain`
+                          : selfGhostEntry
+                            ? `your best run · ${selfGhostEntry.candlesPassed} candles — saved on this device only`
+                            : "nothing recorded yet — finish a run and race yourself"}
+                    </p>
+                  )}
+                  {/* P7.3 async duel entry (typed code) — secondary to the climb */}
+                  {!duel && !archive && (
+                    <div className="cc-tf-row">
+                      {codeOpen ? (
+                        <div className="cc-duel-code-row">
+                          <input
+                            className={`cc-input cc-input-code${codeErr ? " cc-input-err" : ""}`}
+                            placeholder="CODE"
+                            maxLength={6}
+                            value={codeInput}
+                            aria-label="Duel code"
+                            onChange={(e) => { setCodeInput(e.target.value.toUpperCase()); setCodeErr(false); }}
+                          />
+                          <button
+                            className="cc-tf-chip"
+                            onClick={() => { void loadDuel(codeInput).then((ok) => { if (!ok) setCodeErr(true); }); }}
+                          >
+                            RACE
+                          </button>
+                        </div>
+                      ) : (
+                        <button className="cc-tf-chip" onClick={() => setCodeOpen(true)}>GOT A DUEL CODE?</button>
+                      )}
+                    </div>
+                  )}
+                  {codeErr && <p className="cc-vs-note" aria-live="polite">NO SUCH DUEL — CHECK THE CODE</p>}
+                  {!duel && !archive && (
+                    <p className="cc-vs-note">a duel pins the SAME chart for a friend — make a code from any finished run (DUEL → on the results panel).</p>
+                  )}
+                  {/* R-1 (docs/RETIRED-FEATURES.md 2026-10-15): the P3.12 "YOUR CLIMBER"
+                      roster row was removed here by owner directive. Selection UI must
+                      NOT come back in first-paint or anywhere else — see the binding
+                      rules in that record. Registry/sprites stay for bot skins + art. */}
+                  <div className="cc-sec-title">MORE</div>
+                  <div className="cc-btn-row">
+                    <button className="cc-btn cc-btn-ghost" onClick={() => setArchOpen(true)} title="famous past days as practice terrain — unscored">PAST CHARTS →</button>
+                    <a className="cc-btn cc-btn-ghost" href="/stats">YOUR STATS →</a>
+                  </div>
+                  {!archive && report && (
+                    <div className="cc-report cc-report-fold">
+                      <button
+                        className="cc-report-toggle"
+                        onClick={() => setReportOpen((o) => !o)}
+                        aria-expanded={reportOpen}
+                      >
+                        <span className="cc-report-arrow" aria-hidden>{reportOpen ? "▾" : "▸"}</span>
+                        DAILY REPORT · {report.date} · {report.symbol}
+                      </button>
+                      {reportOpen && (
+                        <>
+                          <p className="cc-report-line">yesterday&apos;s episode — honest aggregates over the day&apos;s real submissions.</p>
+                          {report.narrative.map((line, i) => (
+                            <p key={i} className="cc-report-line">{line}</p>
+                          ))}
+                          <button className="cc-report-copy" onClick={copyReport}>{reportCopied ? "COPIED ✓" : "COPY EPISODE"}</button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {!archive && <PredictionPanel name={name} />}
+                  {burn && (
+                    <p className="cc-burn-line" title="cumulative $WICK sent to the irrecoverable burn address">
+                      {/* P6.5 / ART V4 burn-counter HUD: flame glyph + ember pulse */}
+                      <svg className="cc-burn-flame" viewBox="0 0 12 14" aria-hidden="true" focusable="false">
+                        <path d="M6 0.8 C7.6 3 9.4 4.6 9.4 7.4 A3.4 3.4 0 0 1 2.6 7.4 C2.6 5.6 3.4 4.4 4.2 3.2 C4.9 4 5.4 4.4 5.4 4.4 C5.2 3 5.4 1.8 6 0.8 Z" fill="currentColor" />
+                      </svg>
+                      <span>SUPPLY BURNED</span>
+                      <span className="cc-burn-sep" aria-hidden>·</span>
+                      <b className="cc-burn-num">{burn}</b>
+                      <span>WICK</span>
+                    </p>
+                  )}
+                  {(miniOfficial || topBoard.length > 0) && (
+                    <div className="cc-board cc-board-mini">
+                      <div className="cc-board-title">{miniOfficial ? "OFFICIAL · TOP 3 TODAY" : "GUEST · TOP 3 TODAY"}</div>
+                      {(miniOfficial ? officialBoard : topBoard).slice(0, 3).map((e, i) => (
+                        <div key={`${e.ts ?? i}-${e.name}`} className="cc-board-row">
+                          <span className={i < 3 ? "cc-board-rank top" : "cc-board-rank"}>#{i + 1}</span>
+                          <span className="cc-board-name">{e.name}</span>
+                          <span className="cc-board-score">{e.score.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </details>
+            </div>
+          </div>
+        )}
+
+
+      </div>
+
+      {showTutorial && <Tutorial onClose={() => setShowTutorial(false)} />}
+
+      {phase === "graduated" && result && (
+        <div className="cc-overlay">
+          <div className="cc-panel cc-panel-death">
+            {/* ART V4: token-era celebration scene — flame crown + wax confetti.
+                Pure CSS, aria-hidden: the canvas behind the panel carries the
+                summit beacon; this strip is the panel's own celebration. */}
+            <div className="cc-grad-scene" aria-hidden="true">
+              <i className="cc-gcf gc1" /><i className="cc-gcf gc2" /><i className="cc-gcf gc3" />
+              <i className="cc-gcf gc4" /><i className="cc-gcf gc5" /><i className="cc-gcf gc6" />
+              <span className="cc-grad-flame" />
+            </div>
+            <h2 className="cc-grad-headline">GRADUATED</h2>
+            <p className="cc-grad-flavor">curve summit reached · summit class</p>
+            <div className="cc-death-score">
+              <span className="cc-death-num">{result.score.toLocaleString()}</span>
+              <span className="cc-death-sub">
+                {result.candlesPassed} candles · best streak x{result.bestStreak} · PB {best.toLocaleString()}
+              </span>
+            </div>
+            {verdict && <p className="cc-vs-verdict" role="status">{verdict}</p>}
+            <div className="cc-death-actions">
+              <button className="cc-btn cc-btn-start" onClick={enterWorld2}>WORLD 2 →</button>
+              <button className="cc-btn cc-btn-ghost" onClick={downloadCard}>DEATH CARD ↓</button>
+              {mintBtn}
+              <button
+                className="cc-btn"
+                onClick={submitScore}
+                disabled={submitting || !canSubmit}
+                title={canSubmit ? undefined : unscoredMsg}
+              >
+                {submitting ? "…" : "SUBMIT SCORE"}
+                {!canSubmit && <span className="sr-only">{unscoredMsg}</span>}
+              </button>
+              <button className="cc-btn" onClick={startRun}>RETRY</button>
+            </div>
+            {mintNote}
+            <p className="cc-grad-next">world 2: the climb continues · gains ×2</p>
+            {reachedPeak && (
+              <button className="cc-btn" onClick={openVault} disabled={vaultBusy} title="peak wick reached — holder vault: +1 weight + a trail for today">
+                {vaultBusy ? "…" : "OPEN WICK VAULT"}
+              </button>
+            )}
+            {vaultMsg && <p className="cc-vault-note" role="status">{vaultMsg}</p>}
+            {rank !== null && <p className="cc-rank">{submittedBoard === "official" ? "OFFICIAL RANK" : "GUEST RANK"} #{rank} TODAY</p>}
+            {rank !== null && laneNote && <p className="cc-rank cc-rank-note" role="status">{laneNote}</p>}
+          </div>
+        </div>
+      )}
+
+      {phase === "dead" && result && (
+        <div className="cc-overlay">
+          <div className="cc-panel cc-panel-death" ref={deathPanelRef} tabIndex={-1} role="dialog" aria-label="Run ended — results and actions">
+            <h2 className="cc-liquidated" role="alert">LIQUIDATED</h2>
+            {result.graduated && (
+              <p className="cc-rival cc-rival-grad">
+                graduated{result.world2 ? " · world 2 reached" : ""}
+              </p>
+            )}
+            <div className="cc-death-score">
+              <span className="cc-death-num">{result.score.toLocaleString()}</span>
+              <span className="cc-death-sub">
+                {result.candlesPassed} candles · best streak x{result.bestStreak} · PB {best.toLocaleString()}
+              </span>
+            </div>
+            {rivalGap > 0 && top && (
+              <p className="cc-rival">
+                TOP TODAY: <b>{top.name}</b> · {top.score.toLocaleString()} — you were <b>{rivalGap.toLocaleString()}</b> pts behind
+              </p>
+            )}
+            {rivalGap === 0 && myLane.length > 0 && <p className="cc-rival cc-rival-lead">YOU LEAD THE DAILY CHART. FLEX IT.</p>}
+            {verdict && <p className="cc-vs-verdict" role="status">{verdict}</p>}
+            {duelCode && (
+              <p className="cc-duel-live" role="status">
+                DUEL LIVE · <b>{duelCode}</b> · {duelCopied ? "INVITATION COPIED ✓" : "SHARE THE CODE"}
+              </p>
+            )}
+            {rank !== null && <p className="cc-rank">{submittedBoard === "official" ? "OFFICIAL RANK" : "GUEST RANK"} #{rank} TODAY</p>}
+            {rank !== null && laneNote && <p className="cc-rank cc-rank-note" role="status">{laneNote}</p>}
+            <div className="cc-death-actions">
+              <input
+                className="cc-input"
+                placeholder="YOUR NAME"
+                maxLength={14}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <input
+                className="cc-input cc-input-rival"
+                placeholder="RIVAL @HANDLE (OPTIONAL)"
+                maxLength={16}
+                value={rival}
+                onChange={(e) => setRival(e.target.value)}
+                aria-label="Rival X handle — stamped on the death card as a challenge"
+              />
+              <button
+                className="cc-btn"
+                onClick={submitScore}
+                disabled={submitting || !canSubmit}
+                title={canSubmit ? undefined : unscoredMsg}
+              >
+                {submitting ? "…" : "SUBMIT SCORE"}
+                {!canSubmit && <span className="sr-only">{unscoredMsg}</span>}
+              </button>
+              <button className="cc-btn cc-btn-ghost" onClick={downloadCard}>DEATH CARD ↓</button>
+              {mintBtn}
+              {canSubmit && data?.seed.source !== "vibe-launch" && !duelCode && (
+                <button
+                  className="cc-btn"
+                  onClick={createDuel}
+                  disabled={duelBusy}
+                  title="create an async duel — a rival opens the code and races your exact run"
+                >
+                  {duelBusy ? "…" : "DUEL →"}
+                </button>
+              )}
+              <button className="cc-btn cc-btn-start" onClick={startRun}>RETRY</button>
+              {/* Visual QA 2026-10-14: symmetric HOME exit on the results
+                  panel — RETRY loops the same terrain; HOME leaves cleanly. */}
+              <a className="cc-btn cc-btn-ghost cc-btn-home" href="/" aria-label="Back to home page">
+                <HomeGlyph size={13} />HOME
+              </a>
+            </div>
+            {mintNote}
+            {archive && practiceNote && <p className="cc-vault-note" role="status">{practiceNote}</p>}
+            {reachedPeak && (
+              <button className="cc-btn" onClick={openVault} disabled={vaultBusy} title="peak wick reached — holder vault: +1 weight + a trail for today">
+                {vaultBusy ? "…" : "OPEN WICK VAULT"}
+              </button>
+            )}
+            {vaultMsg && <p className="cc-vault-note" role="status">{vaultMsg}</p>}
+            {officialBoard.length > 0 && (
+              <div className="cc-board cc-board-official">
+                <div className="cc-board-title">
+                  🏆 OFFICIAL · {data?.seed.symbol}
+                  <a className="cc-board-more" href={`/leaderboard?board=official&scope=daily&interval=${tf}`}>FULL BOARD ↗</a>
+                </div>
+                <div className="cc-board-sub">
+                  wallet-verified · best run per wallet{officialSeason ? ` · season ${officialSeason}` : ""}
+                </div>
+                {officialBoard.slice(0, 10).map((e, i) => (
+                  <div key={`off-${e.ts ?? i}-${e.wallet ?? e.name}`} className="cc-board-row">
+                    <span className={i < 3 ? "cc-board-rank top" : "cc-board-rank"}>#{i + 1}</span>
+                    <span className="cc-board-name">
+                      {e.name}
+                      {e.wallet ? <i className="cc-board-wallet">{e.wallet}</i> : null}
+                    </span>
+                    <span className="cc-board-score">{e.score.toLocaleString()}</span>
+                    <button className="cc-report-btn" onClick={() => reportScore(e)} title="Report suspicious score" aria-label={`Report ${e.name}'s score`}>🚩</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {board.length > 0 && (
+              <div className="cc-board">
+                <div className="cc-board-title">
+                  {officialBoard.length > 0 ? "CASUAL" : "GUEST"} · {data?.seed.symbol}
+                  <a className="cc-board-more" href={`/leaderboard?board=guest&scope=daily&interval=${tf}`}>FULL BOARD ↗</a>
+                </div>
+                <div className="cc-board-sub">typed names · unofficial · play stays free &amp; walletless</div>
+                {board.slice(0, 10).map((e, i) => (
+                  <div key={`${e.ts ?? i}-${e.name}`} className="cc-board-row">
+                    <span className={i < 3 ? "cc-board-rank top" : "cc-board-rank"}>#{i + 1}</span>
+                    <span className="cc-board-name">{e.name}</span>
+                    <span className="cc-board-score">{e.score.toLocaleString()}</span>
+                    <button className="cc-report-btn" onClick={() => reportScore(e)} title="Report suspicious score" aria-label={`Report ${e.name}'s score`}>🚩</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {archOpen && <ArchiveBrowser onClose={() => setArchOpen(false)} />}
+
+      <footer className="cc-footer">
+        <WalletChip />
+        <span aria-hidden>·</span>
+        <a href="/" className="cc-foot-home" aria-label="Candle Climber home"><HomeGlyph size={11} />home</a>
+        <span aria-hidden>·</span>
+        <a href="https://testnet.vibevibe.fun/" target="_blank" rel="noopener noreferrer">vibe/vibe testnet</a>
+        <span aria-hidden>·</span>
+        <a href="https://faucet.testnet.chain.robinhood.com/" target="_blank" rel="noopener noreferrer">faucet</a>
+        <span aria-hidden>·</span>
+        <a href="https://discord.gg/vibevibebuilders" target="_blank" rel="noopener noreferrer">discord</a>
+        <span aria-hidden>·</span>
+        <a href="/airdrop">airdrop board</a>
+        <span aria-hidden>·</span>
+        <a href="/partners">partners</a>
+        <span aria-hidden>·</span>
+        <a href="/stats">stats</a>
+        <span aria-hidden>·</span>
+        <a href="/leaderboard">leaderboard</a>
+        <span aria-hidden>·</span>
+        <a href="/privacy">privacy</a>
+        <span aria-hidden>·</span>
+        <a href="/terms">terms</a>
+        <span aria-hidden>·</span>
+        <span>no real funds</span>
+      </footer>
+
+      {/* Sweep 4 (2026-10-14, D8): the Settings/Achievements triggers used to
+          render as an UNSTYLED flow bar at the top of the page — visually
+          buried under the game canvas (z10) and unclickable (hit-testing
+          resolved to the canvas), leaving Settings unreachable in the whole
+          play UI. They now share one corner-tools group with the sound chip:
+          bottom-right, above the canvas, pointer-events restored. */}
+      <div className="cc-corner-tools">
+        <div className="cc-chip cc-settings-trigger">
+          <SettingsPanel triggerVariant="ghost" triggerSize="sm" />
+          <AchievementsPanel triggerVariant="ghost" triggerSize="sm" newCount={newAchievements.length} />
+        </div>
+        <button
+          className="cc-chip cc-mute"
+          onClick={toggleMute}
+          aria-label={muted ? "Turn sound on" : "Mute sound"}
+          aria-pressed={!muted}
+        >
+          {muted ? "MUTED" : "SOUND ON"}
+        </button>
+      </div>
+    </div>
+  );
+}

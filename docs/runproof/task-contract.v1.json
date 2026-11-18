@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:candle-climber:runproof:task-result:v1",
+  "title": "RunTrace deterministic replay-consistency task result v1",
+  "description": "Output of verify-run-trace. The decision is deterministic TypeScript and engine replay, not an LLM.",
+  "type": "object",
+  "required": ["task", "policy", "decision", "reason", "evidence", "ruleset", "replay", "issues", "limits"],
+  "properties": {
+    "task": { "const": "verify-run-trace" },
+    "policy": { "const": "runproof/deterministic-replay/v1" },
+    "decision": { "enum": ["ACCEPT", "FLAG"] },
+    "reason": { "type": "string", "minLength": 1, "maxLength": 220 },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": { "type": "string", "minLength": 1, "maxLength": 260 }
+    },
+    "ruleset": { "const": "this branch's Candle Climber deterministic core; fixed 60 Hz" },
+    "replay": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["ticks", "score", "candlesPassed", "bestStreak", "deathCause", "jumpTicks", "landTicks", "scoreEvents"],
+          "properties": {
+            "ticks": { "type": "integer", "minimum": 0 },
+            "score": { "type": "integer", "minimum": 0 },
+            "candlesPassed": { "type": "integer", "minimum": 0 },
+            "bestStreak": { "type": "integer", "minimum": 0 },
+            "deathCause": { "enum": ["fell", "crumbled", "wicked", null] },
+            "jumpTicks": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+            "landTicks": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+            "scoreEvents": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["tick", "score", "combo", "candlesPassed"],
+                "properties": {
+                  "tick": { "type": "integer", "minimum": 0 },
+                  "score": { "type": "integer", "minimum": 0 },
+                  "combo": { "type": "integer", "minimum": 0 },
+                  "candlesPassed": { "type": "integer", "minimum": 0 }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "message": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "limits": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+  },
+  "additionalProperties": false
+}

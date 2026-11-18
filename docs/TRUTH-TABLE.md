@@ -1,0 +1,82 @@
+# TRUTH TABLE — every product claim vs the code, the tests and the primary source
+
+> Created 2026-10-10 (launch-readiness pass). One row per claim a reader could
+> find in this repo's docs, marketing surface or launch material. The rule is
+> simple: **a claim is worth nothing until it is traced to code, a test, a
+> captured live read, or an official ecosystem source** — and when it is not,
+> it says so here, in public.
+>
+> Re-run the automated side of this table any time:
+>
+> ```bash
+> bun scripts/verify-feeds.ts        # live official-feed connection test (exit 0/1/2)
+> bun test                           # 42 test files / 530+ tests, zero network
+> ```
+
+## Status vocabulary
+
+| Status | Means |
+|---|---|
+| ✅ **VERIFIED** | In-repo automated evidence, or a captured live read on the date shown. |
+| 🟡 **PARTIAL** | The mechanism ships, but the claimed *end state* is not reached (or is not provable from here). |
+| ⛔ **NOT CONNECTED** | The claim is false or impossible as stated today. We keep documenting it as such rather than hiding it. |
+| 📄 **OFFICIAL** | A statement made by the ecosystem, quoted from an official source — not our product claim, and not a promise to the player. |
+| ❓ **UNVERIFIED** | No evidence obtainable inside this repository. |
+
+## Claims
+
+| # | Claim | Stated in | Evidence (real path / captured read) | Status |
+|---|---|---|---|---|
+| 1 | One daily level = one real symbol's chart, identical for every player worldwide (deterministic daily seed) | README · GAME_DESIGN | `src/game/cc/level.ts`, `src/game/cc/rng.ts`; `test/level-determinism.test.ts` | ✅ VERIFIED |
+| 2 | Real market data: Binance klines via server proxy + geo-fallback + synthetic fallback | README · FEEDS §1 | `src/app/api/candles/route.ts`; `test/feeds.test.ts` | ✅ VERIFIED |
+| 3 | Stock rails use real OHLC (Yahoo primary, stooq fallback) | FEEDS §2–3 | Parsers are pure and test-pinned; **live reachability is IP-dependent** (Yahoo 429 / stooq anti-bot) and degrades to the anchored path — see FEEDS failure modes | 🟡 PARTIAL |
+| 4 | Global leaderboard: memory fallback → MongoDB Atlas, env-gated; two lanes that never mix (guest walletless · official wallet-bound) | README · ECONOMY-LAWS LAW 1.2 note | `src/lib/leaderboard-store.ts`; **Atlas prod-verified 2026-10-08 (E0.3/O1 closed): prod `GET /api/leaderboard` → `"store":"mongo"`, `dbError:null`**; lane isolation pinned by `test/official-board.test.ts` | ✅ VERIFIED |
+| 5 | Score is pure skill; anti-sybil (HMAC run-tokens, server-side verification) | README · ECONOMY-LAWS | `src/lib/run-token.ts`; `test/run-token.test.ts`; tokenless terrain is never POSTed (`GameCanvas` submit gate) | ✅ VERIFIED |
+| 6 | Stock levels are checked against the official on-chain price | ROBINHOOD-CHAIN-INTEGRATION | Live 2026-10-10: `GET /api/candles?symbol=TSLA` → `seed.onchain.verified: true`, price `$382.95`, `deltaPct -3.23%` | ✅ VERIFIED |
+| 7 | We read the official Robinhood Chain stock price (keyless, public RPC) | ROBINHOOD-CHAIN-INTEGRATION | Chain **4663**, feed `0x7A6b81…33b1`, resolved from the Chainlink directory; live read 2026-10-10 `$382.95`, round 1491; unit contract in `test/robinhood-chain.test.ts` | ✅ VERIFIED |
+| 8 | Feed addresses are official, not invented | ROBINHOOD-CHAIN-INTEGRATION | `resolveOfficialFeed` reads the Chainlink reference-data directory (58 entries, live 2026-10-10); the snapshot is only a miss fallback | ✅ VERIFIED |
+| 9 | Mainnet official feeds and testnet faucet tokens are never conflated | ROBINHOOD-CHAIN-INTEGRATION | Separate registries; testnet read returns `symbol()`/`decimals()` **only** (price never read); live 2026-10-10: TSLA `0xC9f9c8…3Bd4E`, decimals 18 | ✅ VERIFIED |
+| 10 | Stock terrain is built from on-chain data (live on-chain OHLC) | Implied by "the chart is the level" for stocks | Only a **spot** feed exists on-chain. Terrain is derived and labeled `derived` / "official on-chain price", anchored to the official close — never presented as live OHLC | ⛔ NOT CONNECTED (impossible today) |
+| 11 | Every stock ticker has an official feed | — | `NFLX` has no published feed → `onchain: null` (live negative control, 2026-10-10) | ⛔ NOT TRUE — documented gap |
+| 12 | Archive levels are verified against the official price | — | Deliberately skipped: a past chart is not comparable to today's spot price | ⛔ BY DESIGN |
+| 13 | $WICK launched on the vibe/vibe testnet (launchpad rails) | README · worklog | `docs/evidence/wick-launch-record.json` — token `0xe2ce0b…5216c`, curve `0x9e00b4…2640c`, launchId 5963 | 🟡 RECORDED (off-chain record; not re-read on-chain in this pass) |
+| 14 | Creator fee split = 75% holders / 20% cash / 5% burn | economy checklist E0.1 (private archive) | Reconciled against the chain record in E0.1 and stored in the launch record | 🟡 RECORDED (see E0.1) |
+| 15 | Airdrop **weights**: streak-based, wallet-linked ledger | economy spec §7 (private archive) | `src/lib/weights.ts` (pure, no I/O) + `src/lib/weights-store.ts` + `test/weights.test.ts` | ✅ VERIFIED as a mechanism — **eligibility for any distribution is NOT established** |
+| 16 | Testnet incentive pool is 5% of supply, discretionary | official platform announcements (2026-10-07) | Primary source = platform docs/legal terms | 📄 OFFICIAL — discretionary, no entitlement implied |
+| 17 | Live at https://candle-climber.vercel.app | README | HTTP 200 re-checked 2026-10-14 (HTTP 200 live) (external deployment, outside this sandbox) | ✅ VERIFIED |
+| 18 | QA: 450+ headless sim rounds + live emulated device sessions, zero exceptions | README | `qa/visual-sweep` (30), `qa/realdevice` (11), `scripts/e2e-gamer-bot.ts`, 42 test files. The README's `scripts/qa-sim.ts` **does not exist** — the reference was stale and is corrected in this pass; the raw sim counter is not reproducible from the repo | 🟡 PARTIAL |
+| 19 | Zero-cost infrastructure (GitHub Student Developer Pack) | README · INFRASTRUCTURE | `docs/INFRASTRUCTURE.md` — a plan document; per-service student-pack status is not verifiable here | 🟡 PARTIAL |
+| 24 | Three chart modes: CRYPTO / STOCKS / LAUNCHPAD with deterministic per-pool daily rotation | README (2026-10-13 refresh) | `src/game/cc/level-source.ts` (`cryptoRotation`/`stocksRotation`), `cc_mode_v2` migration + legacy deep-link compat; `test/modes.test.ts` (determinism, pool disjointness, no consecutive repeats, full-cycle reachability) | ✅ VERIFIED |
+| 25 | PARTNER lane: curated hold-to-list with a phase-aware gate and on-chain verification | partner-lane roadmap (private archive) | `src/lib/partner-{registry,verifier,threshold,store}.ts`; curve-phase gate = platform's own per-wallet max (19.6M WICK), graduated gate = 1.25 ETH at realizable DEX price; `test/partner-*.test.ts` | ✅ VERIFIED (mechanism; zero listings is the honest v0 state) |
+| 26 | $WICK price readers: curve formula (invariant-checked per read) + post-graduation DEX pool read (extsload slot 6, three-source pinned) | partner-lane design §4b (private archive) | `src/lib/wick-price.ts` + `src/lib/keccak.ts` (dependency-free, standard-vector pinned); live re-proof: `bun scripts/smoke-dex-reader.ts` (PASS 2026-10-13: WICK meter 0.171% curve ok; BEEF word structure-consistent, tick moved 206655→206880 as the live pool traded) | ✅ VERIFIED live |
+| 27 | Integrity chain fails closed without its secret in production | `.env.example` (RUN_TOKEN_SECRET) | `src/lib/run-token.ts` — prod without a secret serves tokenless (unscored) terrain and rejects every token; pinned by `test/run-token.test.ts` fail-closed block (2026-10-13) | ✅ VERIFIED |
+| 20 | Share loop: OG/Twitter cards, PWA manifest, metadataBase, Death Card PNG | README | `public/og.png`, `public/manifest.webmanifest`, `src/app/layout.tsx` (`metadataBase`, `openGraph`), `src/game/cc/deathcard.ts` | ✅ VERIFIED |
+| 21 | The OFFICIAL board requires a valid `personal_sign` ownership proof — missing/forged/stale degrades to guest with an honest note; play never blocked | README · ECONOMY-LAWS LAW 1.2 (hardening, 2026-10-10) | `src/lib/wallet-proof.ts` (audited @noble primitives) + `src/lib/proof-message.ts`; `test/wallet-proof.test.ts` (hand-built EIP-191 envelope, independent of the module) + `test/official-proof-route.test.ts` (real handler, no mocks) | ✅ VERIFIED |
+| 22 | Official records are season-scoped (append-only season registry; S1 opened 2026-10-10) | README · ECONOMY-LAWS LAW 5.3 note | `src/lib/seasons.ts` (pure); `test/official-board.test.ts` (pre-season dates ⇒ null season) | ✅ VERIFIED |
+| 23 | Every traveling share text carries a measurable `?ref=` link; board rows stamp the ref (E5.5 attribution loop) | FORM-PACK §6 note · ECONOMY-CHECKLIST E5.5 | `sanitizeRef` in `src/lib/board-validation.ts` (bounded alphabet, fail-open omit); client `REF_KEY` loop in GameCanvas; rollup on `/ops` (`laneStats().topRefs`); `test/e5-e6.test.ts` | ✅ VERIFIED (mechanism) — traffic volume is a reach question, not a code question |
+
+## What we deliberately do NOT claim
+
+- **No guaranteed rewards, payouts, listings or prices.** Weights accrue in the
+  product; what (if anything) they become is the ecosystem's call and is
+  **unconfirmed**. Language rule: "builds weights", never "earn/guaranteed"
+  (ECONOMY-LAWS LAW 3.2/4). Testnet participation terms are the platform's:
+  https://testnet.vibevibe.fun/docs (safety essentials + FAQ).
+- **No on-chain OHLC / no "real-time on-chain terrain".** Row 10 stays ⛔ until a
+  historical-price source exists on Robinhood Chain (see
+  ROBINHOOD-CHAIN-INTEGRATION §5).
+- **No testnet price.** Testnet Stock Token feeds are mock; we read them for
+  identity only.
+- **No invented numbers.** When official data is unavailable the value is `null`
+  or explicitly labeled `synthetic` / `derived` — never a plausible-looking
+  substitute.
+
+## Stale claims found and corrected in this pass
+
+| Where | Was | Now |
+|---|---|---|
+| README (QA line) | pointed at `scripts/qa-sim.ts`, which does not exist in the repo | points at the artifacts that do exist (`qa/`, `test/`, `scripts/e2e-gamer-bot.ts`) |
+| README (status table) | listed the $WICK token phase and PvP duels as "Next", though the token is launched and duel/ghost/rival code ships | moved to an accurate "shipped / pending" wording |
+| README (status header) | "deployed 2026-09-29 · CI green" with no data-honesty section | adds the official-feed + mainnet/testnet honesty section and a re-verify date |
+
+*Update this table whenever a claim is added, moved or retired — same commit.*

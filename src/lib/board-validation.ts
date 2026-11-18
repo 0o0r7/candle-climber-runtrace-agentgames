@@ -1,0 +1,104 @@
+// Leaderboard POST validation — PURE decision core (W5).
+// Extracted mechanically from /api/leaderboard (W1) so
+// test/leaderboard-contract.test.ts can pin the anti-cheat contract. The route
+// keeps transport concerns (per-IP rate limit, run-token verification +
+// staleness, storage) and hands this function the VERIFIED token payload —
+// client-claimed symbol/date can never reach a stored entry.
+// LAW 1.2 Option B (2026-10-10): the 4th arg is the NORMALIZED wallet (or null
+// from the weights module) — a valid wallet stamps the run onto the official
+// lane; no/invalid wallet stamps the guest lane (fail-open to guest — play is
+// never blocked by wallet state, LAW 1.2 substance).
+import type { BoardEntry } from "@/lib/leaderboard-store";
+import type { RunTokenPayload } from "@/lib/run-token";
+import { seasonOf } from "@/lib/seasons";
+// W4: engine max gain = 10 base (20 post-grad world 2) × combo cap (1 + 12*0.5)
+// = 7 → 70 / 140. Shared with the engine via src/lib/scoring.ts and coupled by
+// test/summit.test.ts.
+import { MAX_SCORE_PER_CANDLE } from "@/lib/scoring";
+
+// world 2 extends the terrain indefinitely (W4); 5000 closed candles ≈ a
+// 20+ minute run — the score caps below remain the real anti-cheat gates.
+export const MAX_CANDLES = 5000;
+
+export type SubmissionVerdict =
+  | { ok: true; entry: BoardEntry }
+  | { ok: false; error: string; status: number };
+
+export function sanitizeName(raw: unknown): string {
+  const s = String(raw ?? "")
+    // strip control chars + angle brackets, keep it plain-text
+    .replace(/[\u0000-\u001f\u007f<>]/g, "")
+    .trim()
+    .slice(0, 14);
+  return s || "ANON";
+}
+
+/**
+ * E5.5 referral attribution (Gate G5: "referral traffic measurable in board
+ * metadata"): the `ref` stamp is OPAQUE METADATA — it never touches score, lane,
+ * or identity decisions (the ownership proof does not bind it). Bounded to a
+ * URL/terminal-safe alphabet so it can ride share links and board reads safely;
+ * anything else is omitted (fail-open, like the rival tag).
+ */
+export function sanitizeRef(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined; // a number/object is not a ref
+  const m = raw.match(/^[A-Za-z0-9_-]{1,24}$/);
+  return m ? m[0] : undefined;
+}
+
+/**
+ * Validate a submission body against the already-verified token payload.
+ * Same checks, same order, same error strings/statuses as the original
+ * route logic (W1), byte-for-byte — this is a mechanical move only.
+ * `now` defaults to Date.now() and is injectable for tests.
+ */
+export function validateSubmission(
+  body: Partial<BoardEntry> & { runToken?: unknown; ref?: unknown },
+  tok: RunTokenPayload,
+  now: number = Date.now(),
+  wallet: string | null = null,
+): SubmissionVerdict {
+  const entry: BoardEntry = {
+    name: sanitizeName(body.name),
+    score: Math.floor(Number(body.score ?? 0)),
+    candlesPassed: Math.floor(Number(body.candlesPassed ?? 0)),
+    bestStreak: Math.max(0, Math.min(999, Math.floor(Number(body.bestStreak ?? 0)))),
+    mutation: String(body.mutation ?? "").slice(0, 24) || undefined,
+    // pinned exclusively from the verified token payload — client-claimed
+    // symbol/date/interval are ignored (P3.5: boards never mix timeframes)
+    symbol: tok.symbol,
+    date: tok.date,
+    interval: tok.interval,
+    ts: now,
+    // Option B identity stamp: wallet lane is derived ONLY from the normalized
+    // address — a malformed wallet string degrades to guest, never an error
+    wallet,
+    board: wallet ? "official" : "guest",
+    season: seasonOf(tok.date), // official records are season-scoped (guest rows carry it too — informational)
+    // E5.5: opaque referral stamp — metadata only, never a ranking/lane input
+    ...(sanitizeRef(body.ref) ? { ref: sanitizeRef(body.ref) } : {}),
+  };
+
+  // shape validation
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.date)) {
+    return { ok: false, error: "invalid date", status: 400 };
+  }
+  if (!Number.isFinite(entry.score) || entry.score < 0 || entry.score > 10_000_000) {
+    return { ok: false, error: "invalid score", status: 400 };
+  }
+  if (!Number.isFinite(entry.candlesPassed) || entry.candlesPassed < 0 || entry.candlesPassed > MAX_CANDLES) {
+    return { ok: false, error: "invalid candles", status: 400 };
+  }
+  // anti-cheat: score must be physically reachable from candles passed.
+  // G5 (129-c #1): the previous tok.count-based caps 403-rejected LEGITIMATE
+  // world-2 marathon runs — world 2 extends the terrain indefinitely beyond
+  // the base terrain's closed-candle count, so capping score/candles at
+  // tok.count lied about the skill ceiling. The physical bounds that remain
+  // are the honest ones: candlesPassed ≤ MAX_CANDLES (engine's own ceiling,
+  // above) and score ≤ candlesPassed × MAX_SCORE_PER_CANDLE + 20.
+  if (entry.score > entry.candlesPassed * MAX_SCORE_PER_CANDLE + 20) {
+    return { ok: false, error: "score inconsistent with run", status: 400 };
+  }
+
+  return { ok: true, entry };
+}

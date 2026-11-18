@@ -1,0 +1,411 @@
+// /api/candles — daily level data: seeded symbol rotation + market-data proxies.
+// Level source logic (seed, watchlist, synthetic fallback) lives in
+// src/game/cc/level-source.ts so the client can derive identical data offline.
+// W1 integrity: ?symbol= is honored when whitelisted, the in-progress weekly
+// candle is dropped (only CLOSED candles shape the terrain), and the response
+// carries an HMAC runToken that pins symbol+date+terrain for the leaderboard.
+// W3 rails: stock pairs via stooq weekly CSV (?symbol=TSLA|AMZN|NFLX) and the
+// vibe/vibe launch-of-the-day as a derived secondary source (?source=launch).
+// The server ALWAYS pins today as the default (utcDateStr) — but P2.2 (H1
+// ARCHIVE) additionally honors ?date= for PAST UTC dates only: famous history
+// becomes playable terrain. Future or malformed dates are ignored outright
+// (the W1 no-future-terrain guarantee is absolute). Archive terrain is
+// clamped to closed candles by the end of that day, so a run token minted for
+// an archive date pins an immutable terrain; the leaderboard's staleness
+// rule keeps such tokens unscoreable, and the client plays archive as
+// PRACTICE (no submission) — see src/game/cc/archive.ts.
+import { NextResponse } from "next/server";
+import { utcDateStr } from "@/game/cc/rng";
+import { pickSeed, syntheticCandles, anchoredCandles, INTERVAL, LIMIT, WATCHLIST, STOCKS, isInterval, cryptoRotation, stocksRotation } from "@/game/cc/level-source";
+import { selectDailySymbol } from "@/lib/market-selector";
+import { readOfficialQuote } from "@/lib/robinhood-chain";
+import { isArchiveDate, endOfDayMs, clampCandlesTo, binanceKlinesUrl } from "@/game/cc/archive";
+import { signRunToken } from "@/lib/run-token";
+import { rateLimited, clientIp } from "@/lib/http-limiter";
+import { parseStooqCsv } from "@/lib/stooq";
+import { parseYahooChart, yahooChartUrl } from "@/lib/yahoo";
+import { getLaunchOfDay, launchSymbol, vibeLaunchCandles } from "@/lib/vibe-launch";
+import { selectDailyCoin, fetchCoinGeckoCandles } from "@/lib/coingecko";
+import type { Candle, CandleData, SeedInfo } from "@/game/cc/types";
+
+type Source = SeedInfo["source"]; // "binance" | "stooq" | "yahoo" | "vibe-launch" | "robinhood" | "synthetic"
+interface CacheEntry { ts: number; candles: Candle[]; source: Source }
+const cache = new Map<string, CacheEntry>();
+const TTL = 24 * 60 * 60 * 1000; // 24h — closed-candle terrain never changes within its UTC day
+
+// W6: how far a served stock terrain's final close may sit from the official
+// on-chain Chainlink price before the level stops claiming verification. A real
+// weekly OHLC close vs. live spot legitimately differ; 10% is the honesty line.
+const ONCHAIN_MATCH_TOLERANCE_PCT = 10;
+
+// Hosts are tried in order. api.binance.com geo-blocks some datacenter IPs
+// (e.g. US-hosted serverless functions -> HTTP 451), so the official
+// market-data mirror data-api.binance.vision is the second host.
+const BINANCE_HOSTS = [
+  "https://api.binance.com",
+  "https://data-api.binance.vision",
+];
+
+// Stooq weekly CSV (free, keyless): https://stooq.com/q/d/l/?s=tsla.us&i=w
+// One row per week; header Date,Open,High,Low,Close,Volume. Parsed with plain
+// string splitting — no dependencies. See docs/FEEDS.md for the failure modes
+// (it serves a JS challenge to some datacenter IPs and denies others outright;
+// any failure here degrades to the synthetic tokenless path).
+const STOOQ_HOSTS = ["https://stooq.com"];
+
+// W3.1: Yahoo v8 chart — the PRIMARY stock feed. Stooq's anti-bot challenge
+// blocks Vercel's egress IPs, so from prod the stooq path degraded to synthetic
+// every time. Yahoo is keyless, challenge-free and serverless-reachable; stooq
+// remains the fallback host for environments where Yahoo is unreachable. Both
+// feeds are real weekly OHLC — the run token pins the exact candles used, so
+// the two feeds can never mix within one leaderboard.
+const YAHOO_HOSTS = ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"];
+
+async function fetchYahoo(symbol: string, clamp?: (rows: Candle[]) => Candle[]): Promise<Candle[] | null> {
+  for (const host of YAHOO_HOSTS) {
+    try {
+      const url = yahooChartUrl(symbol, host);
+      const res = await fetch(url, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; CandleClimber/1.0)" },
+      });
+      if (!res.ok) { console.error("[candles/yahoo]", host, "HTTP", res.status); continue; }
+      const body: unknown = await res.json();
+      // Pure parser (W5 extraction — src/lib/yahoo.ts, contract pinned by
+      // test/feeds.test.ts): null = challenge/error payload OR <40 closed rows.
+      const parsed = parseYahooChart(body, Date.now());
+      if (!parsed) {
+        console.error("[candles/yahoo]", host, "unusable payload (error shape?) or <40 closed rows");
+        continue;
+      }
+      // Archive mode clamps the full history to closed-by-that-day rows; if
+      // the clamped window is too thin, the next feed takes over.
+      const clamped = clamp ? clamp(parsed) : parsed;
+      if (clamped.length < 40) {
+        console.error("[candles/yahoo]", host, "<40 rows closed by archive date");
+        continue;
+      }
+      return clamped;
+    } catch (err) {
+      console.error("[candles/yahoo]", host, "fetch failed:", (err as Error).message);
+      continue;
+    }
+  }
+  return null;
+}
+
+async function fetchBinance(symbol: string, interval: string, endMs?: number): Promise<Candle[] | null> {
+  for (const host of BINANCE_HOSTS) {
+    try {
+      // archive mode pins endTime so the window ENDS at the archive day;
+      // today-path passes no endMs. P3.5: interval flows through (1w/1d/4h/1h).
+      const url = binanceKlinesUrl(host, symbol, interval, LIMIT, endMs);
+      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
+      if (!res.ok) { console.error("[candles]", host, "HTTP", res.status); continue; }
+      const rows = (await res.json()) as unknown[];
+      if (!Array.isArray(rows)) continue;
+      // Drop the in-progress candle (closeTime still in the future): only
+      // CLOSED weekly candles shape the terrain, so the same symbol + UTC day
+      // yields the exact same level no matter when it is fetched.
+      const closed = rows.filter((r) => {
+        const closeTime = Number((r as (string | number)[])?.[6]);
+        return Number.isFinite(closeTime) && closeTime <= (endMs ?? Date.now());
+      });
+      if (closed.length < 40) continue;
+      return closed.map((r) => {
+        const k = r as (string | number)[];
+        const vol = Number(k[5]);
+        return {
+          t: Number(k[0]),
+          o: Number(k[1]),
+          h: Number(k[2]),
+          l: Number(k[3]),
+          c: Number(k[4]),
+          // volume feeds the H2 weather fog (P2.3); 0/NaN -> omitted
+          ...(Number.isFinite(vol) && vol > 0 ? { v: vol } : {}),
+        };
+      });
+    } catch (err) {
+      console.error("[candles]", host, "fetch failed:", (err as Error).message);
+      continue;
+    }
+  }
+  return null;
+}
+
+async function fetchStooq(symbol: string, clamp?: (rows: Candle[]) => Candle[]): Promise<Candle[] | null> {
+  for (const host of STOOQ_HOSTS) {
+    try {
+      const url = `${host}/q/d/l/?s=${symbol.toLowerCase()}.us&i=w`;
+      const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
+      if (!res.ok) { console.error("[candles/stooq]", host, "HTTP", res.status); continue; }
+      const text = await res.text();
+      // Pure parser (W5 extraction — src/lib/stooq.ts, contract pinned by
+      // test/feeds.test.ts): null = challenge/HTML payload OR <40 closed rows.
+      const parsed = parseStooqCsv(text, Date.now());
+      if (!parsed) {
+        console.error("[candles/stooq]", host, "unusable payload (challenge/blocked?) or <40 closed rows");
+        continue;
+      }
+      // Archive mode clamps the full history to closed-by-that-day rows; if
+      // the clamped window is too thin, the synthetic path takes over.
+      const clamped = clamp ? clamp(parsed) : parsed;
+      if (clamped.length < 40) {
+        console.error("[candles/stooq]", host, "<40 rows closed by archive date");
+        continue;
+      }
+      return clamped;
+    } catch (err) {
+      console.error("[candles/stooq]", host, "fetch failed:", (err as Error).message);
+      continue;
+    }
+  }
+  return null;
+}
+
+export async function GET(req: Request) {
+  // Delivery hardening (2026-10-13): this route issues the HMAC run tokens the
+  // whole integrity chain trusts and fans out to paid/public upstreams — put a
+  // generous per-IP ceiling on it (60/min ≈ 60 terrain loads/min from one IP;
+  // the game client needs 1). Per-instance, same tradeoff as the write lanes.
+  if (rateLimited("candles", clientIp(req), 60)) {
+    return NextResponse.json(
+      { error: "rate limited — slow down" },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
+
+  const { searchParams } = new URL(req.url);
+  // Date-clamp (P0 follow-up, extended by P2.2): the server pins today unless
+  // ?date= names a strictly PAST, well-formed UTC date (H1 ARCHIVE). Future or
+  // malformed ?date= values are ignored — no terrain (or run token) can ever
+  // be minted for a future date.
+  const today = utcDateStr();
+  const requestedDate = searchParams.get("date");
+  const isArchive = isArchiveDate(requestedDate, today);
+  const date = isArchive ? (requestedDate as string) : today;
+
+  // ?source=launch — vibe/vibe launch-of-the-day: derived terrain built from a
+  // real launch's metrics, server-vouched with a run token. The value is
+  // whitelisted to the single string "launch"; anything else is ignored.
+  // (Launch-of-the-day is a TODAY concept — an archive ?date= takes priority
+  // and the launch source is skipped.)
+  if (!isArchive && searchParams.get("source") === "launch") {
+    try {
+      const launch = await getLaunchOfDay(date);
+      if (launch) {
+        const symbol = launchSymbol(launch.symbol);
+        const key = `vibe:${launch.launchId}:${symbol}|${date}`;
+        let candles: Candle[];
+        const hit = cache.get(key);
+        if (hit && Date.now() - hit.ts < TTL) {
+          candles = hit.candles;
+        } else {
+          candles = vibeLaunchCandles(launch, date);
+          cache.set(key, { ts: Date.now(), candles, source: "vibe-launch" });
+        }
+        const data: CandleData = {
+          seed: { date, symbol, interval: "1w", source: "vibe-launch" }, // G5: concrete tf — matches the signed token
+          candles,
+        };
+        const tok = signRunToken(symbol, date, candles.length, JSON.stringify(candles));
+        if (tok) data.runToken = tok;
+        return NextResponse.json(data, { headers: { "Cache-Control": "public, max-age=300" } });
+      }
+    } catch (err) {
+      console.error("[candles/vibe-launch]", (err as Error).message);
+    }
+    // Launch-feed failure -> the daily synthetic tokenless path (same rule as
+    // every other feed failure): unscored by construction.
+  }
+
+  // ?source=coingecko — Market Mode's broader asset pool: selects today's top
+  // coin from CoinGecko's top-30-by-market-cap list (volatility-scored, same
+  // rotation-pool philosophy as the Binance watchlist path) and serves its
+  // 7d sparkline as playable terrain. Failure degrades to the standard feed
+  // chain below (the symbol selection + Binance/Yahoo/Stooq path).
+  if (!isArchive && searchParams.get("source") === "coingecko") {
+    try {
+      const coin = await selectDailyCoin(date);
+      if (coin) {
+        const key = `cg:${coin.coinId}|${date}`;
+        let candles: Candle[] | null = null;
+        const hit = cache.get(key);
+        if (hit && Date.now() - hit.ts < TTL) {
+          candles = hit.candles;
+        } else {
+          const fetched = await fetchCoinGeckoCandles(coin.coinId);
+          if (fetched && fetched.length >= 5) {
+            candles = fetched;
+            cache.set(key, { ts: Date.now(), candles, source: "coingecko" });
+          }
+        }
+        if (candles && candles.length >= 5) {
+          const data: CandleData = {
+            seed: { date, symbol: coin.symbol, interval: "1d", source: "coingecko" as const },
+            candles,
+          };
+          // G5 (129-c #7): the token MUST pin the interval the terrain was served with ("1d") — the old default signed "1w" while seed.interval said "1d", landing 1d terrain on the 1w board (P3.5 "boards never mix timeframes" broken for this source)
+          const tok = signRunToken(coin.symbol, date, candles.length, JSON.stringify(candles), "1d");
+          if (tok) data.runToken = tok;
+          return NextResponse.json(data, { headers: { "Cache-Control": "public, max-age=300" } });
+        }
+      }
+    } catch (err) {
+      console.error("[candles/coingecko]", (err as Error).message);
+    }
+    // CoinGecko failure → fall through to the standard feed chain
+  }
+
+  // Honor ?symbol= when it is one of the whitelisted pairs (crypto rotation or
+  // stock rails); otherwise the daily seeded rotation decides for the level
+  // date — for an archive date that is THAT day's rotation symbol, so the
+  // archive browser can list past dailies without any server allow-list.
+  const requested = (searchParams.get("symbol") ?? "").toUpperCase();
+  // ?pool=stocks|crypto — the 3-mode restructure (council 2026-10-12 ruling B):
+  // the mode the player is in decides WHICH pool the DEFAULT level comes from.
+  // A pinned ?symbol= deep link keeps working in every pool (whitelist-checked
+  // below) — the pool only decides the default when no symbol is pinned.
+  const pool = searchParams.get("pool");
+  // Volatility-based daily selection: instead of random watchlist rotation,
+  // fetch 24h ticker stats for all watchlist symbols and pick the one with
+  // the most interesting volatility/volume profile. Falls back to the legacy
+  // seeded rotation if the ticker API is unreachable.
+  let symbol: string;
+  if (WATCHLIST.includes(requested) || STOCKS.includes(requested)) {
+    symbol = requested;
+  } else if (pool === "stocks") {
+    // STOCKS mode: deterministic equity-of-the-day. No volatility scoring
+    // here — there is no keyless 24h stock-ticker endpoint to score with;
+    // the honest default is the fixed rotation (level-source.ts), same
+    // no-consecutive-repeat guarantee as the crypto rotations.
+    symbol = stocksRotation(date);
+  } else {
+    const volSymbol = await selectDailySymbol(WATCHLIST, date);
+    // pool=crypto keeps the fallback crypto-only (a stock leaking into CRYPTO
+    // mode's default would break the mode promise); bare legacy calls keep
+    // the all-symbol pickSeed fallback byte-for-byte.
+    symbol = volSymbol ?? (pool === "crypto" ? cryptoRotation(date) : pickSeed(date).symbol);
+  }
+  const isStock = STOCKS.includes(symbol);
+
+  // W6 — the official Robinhood Chain read. TODAY'S level only: an archive date
+  // is a PAST terrain, so comparing it against the current on-chain price would
+  // be meaningless. Stocks only, and a null quote simply changes nothing (the
+  // existing feed chain still decides, and synthetic stays explicitly synthetic).
+  // G5 (129-c #8): the anchor must be STABLE within its UTC day — a fresh live
+  // quote per request let two warm instances serve DIFFERENT terrains (and
+  // different valid tokens) for the same (symbol,date) board, breaking the
+  // "closed-candle terrain never changes within its UTC day" determinism
+  // promise. Day-keyed cache: the day's first SUCCESSFUL read wins for this
+  // instance. Documented residual: cross-instance first-read-wins is per
+  // instance (same accepted tradeoff class as the per-instance rate limiter);
+  // submission integrity is unaffected either way — the token fingerprint pins
+  // every POST to the exact terrain it was issued for.
+  type OfficialQuote = Awaited<ReturnType<typeof readOfficialQuote>>;
+  const anchorCache = (globalThis as { __ccAnchorCache?: Map<string, { day: string; q: OfficialQuote }> }).__ccAnchorCache
+    ?? ((globalThis as { __ccAnchorCache?: Map<string, { day: string; q: OfficialQuote }> }).__ccAnchorCache = new Map());
+  let official: OfficialQuote = null;
+  if (isStock && !isArchive) {
+    const ak = `${symbol}|${date}`;
+    const hit = anchorCache.get(ak);
+    if (hit && hit.day === date) {
+      official = hit.q;
+    } else {
+      official = await readOfficialQuote(symbol);
+      if (official) anchorCache.set(ak, { day: date, q: official }); // failures are not cached — a flaky RPC read retries
+    }
+  }
+
+  // P3.5 timeframe selector: ?interval= is whitelist-checked; the classic
+  // weekly level stays the default. ARCHIVE stays daily-only in V1 (the
+  // archive pipeline is weekly-shaped by design) and STOCK rails have no
+  // intraday feed — both honestly pin "1w" and echo it in seed.interval.
+  const requestedInterval = searchParams.get("interval");
+  const interval = !isArchive && !isStock && isInterval(requestedInterval) ? requestedInterval : INTERVAL;
+
+  const key = `${symbol}|${date}|${interval}`;
+  let source: Source = isStock ? "yahoo" : "binance";
+  let candles: Candle[] = [];
+
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.ts < TTL) {
+    candles = hit.candles;
+    source = hit.source; // restore true source — a cached synthetic must stay synthetic (and tokenless)
+  } else {
+    // Archive mode ends every fetch window at the end of the archive day:
+    // binance via endTime, stooq by clamping the parsed full history.
+    const endMs = isArchive ? endOfDayMs(date) : undefined;
+    const stockClamp = (rows: Candle[]) => (isArchive ? clampCandlesTo(rows, date) : rows);
+    // W3.1 stock chain: Yahoo v8 (Vercel-reachable) -> stooq (fallback) ->
+    // synthetic (tokenless). source follows whichever feed actually served.
+    const yahoo = isStock ? await fetchYahoo(symbol, stockClamp) : null;
+    if (yahoo) {
+      candles = yahoo;
+      source = "yahoo";
+    } else {
+      const live = isStock
+        ? (await fetchStooq(symbol, stockClamp))
+        : await fetchBinance(symbol, interval, endMs);
+      if (live) {
+        candles = live;
+        if (isStock) source = "stooq";
+      } else if (official) {
+        // W6: no reachable OHLC history for this stock, but the official
+        // on-chain price IS real — anchor the derived shape to it (labeled
+        // "official price", never "live data") instead of going tokenless.
+        candles = anchoredCandles(date, LIMIT, official.price, interval);
+        source = "robinhood";
+      } else {
+        candles = syntheticCandles(date, LIMIT, interval);
+        source = "synthetic";
+      }
+    }
+    cache.set(key, { ts: Date.now(), candles, source });
+  }
+
+  const seed: SeedInfo = { date, symbol, interval, source };
+  // W6: attach the official on-chain verification when a feed was read. The
+  // terrain is never ALTERED to match the price — the delta is reported instead,
+  // so a divergence shows up honestly rather than being hidden.
+  if (official) {
+    const anchorPrice = candles[candles.length - 1]?.c ?? null;
+    const deltaPct =
+      anchorPrice !== null && official.price > 0
+        ? ((anchorPrice - official.price) / official.price) * 100
+        : null;
+    seed.onchain = {
+      chainId: official.chainId,
+      feed: official.feed,
+      feedSource: official.feedSource,
+      price: official.price,
+      decimals: official.decimals,
+      updatedAt: official.updatedAt,
+      ageSec: official.ageSec,
+      stale: official.stale,
+      roundId: official.roundId,
+      anchorPrice,
+      deltaPct,
+      verified:
+        !official.stale && deltaPct !== null && Math.abs(deltaPct) <= ONCHAIN_MATCH_TOLERANCE_PCT,
+    };
+  }
+
+  const data: CandleData = { seed, candles };
+  // Run tokens are issued for every pinned non-synthetic terrain (binance,
+  // stooq, yahoo, vibe-launch, robinhood-anchored); the synthetic fallback
+  // stays tokenless, and tokenless runs are unscored client-side. F1 decision
+  // (2026-10-10, owner-delegated): anchored robinhood terrain stays scoreable
+  // per the vibe-launch precedent — derived-but-real feeds are scoreable, and
+  // the UI chip says ON-CHAIN, never "live data". The token lib is
+  // source-agnostic (contract pinned in test/robinhood-chain.test.ts). P3.5:
+  // the token binds the timeframe, so per-tf boards stay server-authoritative.
+  if (source !== "synthetic") {
+    const tok = signRunToken(symbol, date, candles.length, JSON.stringify(candles), interval);
+    if (tok) data.runToken = tok;
+  }
+  return NextResponse.json(data, {
+    headers: { "Cache-Control": "public, max-age=300" },
+  });
+}

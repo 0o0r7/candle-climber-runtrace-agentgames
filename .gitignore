@@ -1,0 +1,110 @@
+# dependencies
+node_modules
+
+# next.js
+/.next/
+/out/
+/build
+
+# logs / build artifacts
+*.log
+dev.log
+server.log
+*.tsbuildinfo
+next-env.d.ts
+
+# env & secrets — NEVER commit
+.env*
+!.env.example
+# .env.production carries ONLY a NEXT_PUBLIC_* (public-by-design) build default —
+# see the file header; every true secret stays untracked (rules above + below)
+!.env.production
+.gh_token
+.mongo_public_key
+.mongo_private_key
+.lambdatest_creds
+.gh_user
+.dvtoken
+.vercel_token
+# 2026-10-29: an environment auto-snapshot once committed these to local
+# history (caught before push) — ignore them so it can never happen again.
+.framer_keys.json
+.framer_token
+.venv-b44/
+
+# internal workspace (private research, tooling, archives — not part of the public game repo)
+/research/
+/ideation/
+/scripts/*
+!/scripts/deathcard/
+!/scripts/e2e-gamer-bot.ts
+!/scripts/smoke-dex-reader.ts
+!/scripts/verify-feeds.ts
+!/scripts/lt_diag.py
+!/scripts/lt_dashboard_view.py
+!/scripts/realdevice_matrix.ts
+!/scripts/trailer/
+!/scripts/gamma_import.py
+!/scripts/gamma_index.py
+!/scripts/gamma_urls/
+!/scripts/import_owner_pack.py
+/archive/
+/.zscripts/
+/examples/
+/mini-services/
+/tests/
+/db/
+/download/
+/upload/
+/skills/
+/Caddyfile
+worklog.md
+prompt
+test
+!test/
+!test/**/*.test.ts
+local-*
+.claude
+.z-ai-config
+.vercel
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+.nim_key
+.atlas_*
+.env*.local
+.discord_token
+
+# research & audit workspace (lives in vibe-ecosystem-kb repo, not the game repo)
+/research-cache/
+/kb-repo/
+/tool-results/
+/after8s.png
+/deathcard.png
+/desktop.png
+/mobile_home.png
+/playing1.png
+agent-ctx/
+
+# e2e gamer-bot artifacts
+e2e-artifacts/
+.krea_creds
+.sentry_token
+
+# ---- secrets (hard-fail: never commit) ----
+.gh_token
+.kb_pat
+.vercel_token
+.sentry_token
+.sentry_*
+.mongo_*
+.lt_*
+.mongo_keys
+.lambdatest_creds
+.krea_creds
+worklog.md
+download/
+upload/
+x_vibegames.json
