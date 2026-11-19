@@ -33,6 +33,7 @@ Public origin for this build: **https://candle-climber-runtrace.vercel.app**
 - [x] `DONE` — `AGENT_GAMES_HMAC_SECRET` set on Vercel for production, preview and development (2026-11-19). If the platform issues a different key at registration, replace this value.
 - [x] `DONE` — Scenario suite re-run against the deployment on 2026-11-19: 22/22 passed; `docs/evidence/agent-games-scenarios.json` is now the production run.
 - [x] `DONE` — CI workflow triggers on the branches this repository actually receives (`main`, `repo-analysis`, `agentgames/runproof`).
+- [x] `DONE` — Test rows removed from the production board on 2026-11-19 (5 guest rows); the weekly board now starts empty. The production evidence receipt `ea11041e-611a-4a0a-be81-d2d0fc5d2ae3` is kept, because the evidence file and READINESS link to it.
 
 ## 3. Wildcard — submission material
 
