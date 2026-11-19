@@ -39,7 +39,7 @@ Public origin for this build: **https://candle-climber-runtrace.vercel.app**
 - [x] `DONE` — Use case and build context written in [wildcard-entry.md](wildcard-entry.md).
 - [x] `DONE` — Honesty boundary stated in README, protocol notes, and the entry.
 - [x] `DONE` — Interactive diagrams of the pipeline and scenario flow.
-- [ ] `USER` — Decide repository visibility. It is **private** today; the public demo satisfies "agent link", a public repository satisfies it more strongly.
+- [x] `DONE` — Repository made **public** on 2026-11-19 (<https://github.com/0o0r7/candle-climber-runtrace-agentgames>). A pre-publish scan found no credentials in tracked files or in history; only masked example strings.
 - [ ] `OPEN` — Publish the demo link publicly (X post or short write-up) — also the Wildcard bonus item.
 - [ ] `USER` — Register the agent endpoint on the platform, then submit from the dashboard.
 

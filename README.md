@@ -6,6 +6,12 @@ RunTrace records gameplay input at the fixed 60 Hz simulation boundary (not at b
 
 This build is prepared as a **Wildcard entry for [zkVerify Agent Games](https://agentgames.zkverify.io/events/wildcard)**.
 
+| | |
+| --- | --- |
+| Live demo | <https://candle-climber-runtrace.vercel.app> |
+| Signed agent endpoint | `POST https://candle-climber-runtrace.vercel.app/api/agentgames` |
+| Production evidence | [`docs/evidence/agent-games-scenarios.json`](docs/evidence/agent-games-scenarios.json) — 22/22 scenarios, recorded against the deployment |
+
 > **Scope.** This is a deterministic replay-consistency check implemented in TypeScript, not a zero-knowledge proof, not anti-cheat, and not identity verification. It answers one narrow question: *given these inputs and this terrain, does this engine build reproduce the recorded outcome?* See [Limits](#limits).
 
 ---

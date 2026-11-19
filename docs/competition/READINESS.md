@@ -27,7 +27,7 @@ Status legend: `DONE` · `TODO` · `BLOCKED (user)` · `UNPUBLISHED`
 
 | # | Item | Official wording | Status |
 |---|---|---|---|
-| A1.1 | Public repository, demo, or write-up showing the agent | "AGENT LINK — A public repository, demo, or write-up showing the agent you built." | `DONE (demo)` — the deployed demo is public; the repository is still **private** and its visibility is the owner's call |
+| A1.1 | Public repository, demo, or write-up showing the agent | "AGENT LINK — A public repository, demo, or write-up showing the agent you built." | `DONE` — public demo (<https://candle-climber-runtrace.vercel.app>) **and** public repository (<https://github.com/0o0r7/candle-climber-runtrace-agentgames>, public since 2026-11-19) |
 | A1.2 | Deployed demo that a reviewer can open without cloning | "Show the agent working — share a public link and endpoint" | `DONE` — <https://candle-climber-runtrace.vercel.app> (`/runproof`, `/runproof/showcase`) |
 | A1.3 | Written use case: problem, users, behaviour | "USE CASE — Explain the problem, who the agent helps, and what it actually does" | `DONE` — `docs/competition/wildcard-entry.md` |
 | A1.4 | Build context: how it works, key decisions | "BUILD CONTEXT — Briefly describe how the agent works and the key decisions behind it" | `DONE` — `docs/competition/wildcard-entry.md`, `docs/runproof/README.md` |
@@ -111,8 +111,13 @@ curl -s "$BASE/api/candles" | head -c 300
 # expect seed + candles + runToken
 ```
 
-- [ ] Malformed body → `400` (not `404`, not `500`).
-- [ ] A full trace from the console → `ACCEPT`; the same trace with a bumped score → `FLAG` + `score_mismatch`.
+- [x] Malformed body is refused, never a crash. Observed on the deployment 2026-11-19: `{}` returns
+      `200` with `decision: "FLAG"` and `reason: "Expected runproof/v1."` — the route answers with a
+      verdict instead of `400`, which is the behaviour the code has; recorded here so the document
+      matches the route rather than the other way round.
+- [x] A full trace from the console → `ACCEPT` (score 105, 216 ticks); the same trace with a bumped
+      score → `FLAG` + "Claimed score 106 does not match replayed score 105" — both passed on the
+      deployment in the 2026-11-19 scenario run (`verify.accept`, `verify.tamper`).
 
 ### B3. Signed protocol (only if A2.2–A2.5 are implemented)
 
