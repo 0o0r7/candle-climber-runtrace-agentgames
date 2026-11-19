@@ -2,7 +2,9 @@
 
 Draft for the [Wildcard](https://agentgames.zkverify.io/events/wildcard) submission form and public write-up.
 
-> Replace `PUBLIC_URL` with the deployed address before submitting.
+**Live:** <https://candle-climber-runtrace.vercel.app> — this build's own
+deployment, separate from the original Candle Climber site
+([product identity](../PRODUCT-IDENTITY.md)).
 
 ## One line
 
@@ -31,18 +33,45 @@ The narrow, useful question is: *can this run be re-executed and does it produce
 ## Public endpoint
 
 ```
-POST PUBLIC_URL/api/runproof/verify
+POST https://candle-climber-runtrace.vercel.app/api/runproof/verify
 Content-Type: application/json
 ```
 
 Accepts a `runproof/v1` trace and returns `task: "verify-run-trace"`, `policy: "runproof/deterministic-replay/v1"`, `decision: "ACCEPT" | "FLAG"`, a short reason, evidence, and replay diagnostics. Malformed or oversized requests return an HTTP error. Schemas: [trace](../runproof/trace-schema.v1.json), [result](../runproof/task-contract.v1.json).
 
 ```
-POST PUBLIC_URL/api/runproof/runs        # verify + store a receipt (attested terrain required)
-GET  PUBLIC_URL/api/runproof/runs/{id}   # read the stored receipt and its trace
+POST https://candle-climber-runtrace.vercel.app/api/runproof/runs        # verify + store a receipt (attested terrain required)
+GET  https://candle-climber-runtrace.vercel.app/api/runproof/runs/{id}   # read the stored receipt and its trace
 ```
 
-Receipts are viewable at `PUBLIC_URL/runproof/r/{id}` and can be re-verified from that page.
+Receipts are viewable at `https://candle-climber-runtrace.vercel.app/runproof/r/{id}` and can be re-verified from that page.
+
+## Signed protocol endpoint
+
+The general published agent protocol is implemented at `POST /api/agentgames`:
+inbound `x-agent-games-signature` verification over the exact raw body, the
+documented `agent-games.preflight.v1` handshake, signed responses, and task-ID
+idempotency (identical retry returns the identical signed answer; conflicting
+reuse returns `409`). It delegates to the same deterministic verifier as the
+public route and stays inert until `AGENT_GAMES_HMAC_SECRET` is configured.
+
+Details, including the one part the platform does not specify (the digest
+profile), are in [../runproof/agentgames-protocol.md](../runproof/agentgames-protocol.md).
+
+## Evidence in the repository
+
+One command plays the game as an automated player and walks every public
+surface, including the signed endpoint:
+
+```sh
+bun scripts/agent-games-scenarios.ts
+BASE_URL=https://candle-climber-runtrace.vercel.app bun scripts/agent-games-scenarios.ts
+```
+
+The latest local run passed **14 / 14** scenarios and wrote
+[../evidence/agent-games-scenarios.json](../evidence/agent-games-scenarios.json):
+the signed terrain's seed and hash, the recorded run's claims, the issued
+receipt, and a verdict with latency for each scenario.
 
 ## Build context
 
@@ -69,8 +98,8 @@ The natural next step is to make the claim checkable by a third party rather tha
 
 ## Links
 
-- Demo and console: `PUBLIC_URL/runproof`
-- Showcase loop (agent plays, server verifies, replay loops): `PUBLIC_URL/runproof/showcase`
-- Game: `PUBLIC_URL/play`
+- Demo and console: `https://candle-climber-runtrace.vercel.app/runproof`
+- Showcase loop (agent plays, server verifies, replay loops): `https://candle-climber-runtrace.vercel.app/runproof/showcase`
+- Game: `https://candle-climber-runtrace.vercel.app/play`
 - Repository: this repository
 - Verification notes: [../runproof/README.md](../runproof/README.md)

@@ -28,6 +28,17 @@ bun run dev          # http://localhost:3000
 | `/leaderboard`, `/stats`, `/partners`, `/airdrop`, `/ops` | Game economy and operator surfaces |
 | `POST /api/runproof/verify` | Verify a trace (checks the run token when present) |
 | `POST /api/runproof/runs` · `GET /api/runproof/runs/{id}` | Issue and read receipts (attested terrain required) |
+| `POST /api/agentgames` | Signed Agent Games protocol: preflight, verification tasks, idempotency |
+
+Run the whole surface end to end, including an automated player:
+
+```sh
+bun scripts/agent-games-scenarios.ts
+```
+
+It plays today's signed market level, sends the trace through the public
+endpoints and the signed protocol, and writes
+[`docs/evidence/agent-games-scenarios.json`](docs/evidence/agent-games-scenarios.json).
 
 ## How verification works
 
@@ -37,18 +48,15 @@ bun run dev          # http://localhost:3000
 4. **Compare.** Replayed score, jumps, landings, scoring events, and final totals are compared against the claims in the trace.
 5. **Decide.** The endpoint returns `ACCEPT` or `FLAG` with a short reason, evidence, and replay diagnostics. A receipt stores that verdict plus the trace.
 
-```
-market level ──▶ GET /api/candles ──▶ candles + run token
-                                            │
-browser input ──▶ recorder (fixed-tick stamping) ──▶ trace (runproof/v1)
-                                                          │
-                                        POST /api/runproof/verify
-                                                          │
-                              terrain attestation + engine replay
-                                                          │
-                                     ACCEPT / FLAG + evidence
-                                                          │
-                                  POST /api/runproof/runs ──▶ /runproof/r/{id}
+```mermaid
+flowchart LR
+  M["Market data<br/>GET /api/candles"] -->|candles + HMAC run token| R["Fixed-tick recorder<br/>60 Hz input boundary"]
+  R --> T["runproof/v1 trace"]
+  T --> V{"POST /api/runproof/verify"}
+  V -->|terrain attestation| P["Server replay<br/>fresh engine instance"]
+  P --> D["ACCEPT / FLAG<br/>+ reason and evidence"]
+  D -->|attested terrain| S["POST /api/runproof/runs"]
+  S --> C["Receipt<br/>/runproof/r/{id}"]
 ```
 
 The verifier is deterministic TypeScript. No model, network call, or randomness is involved in the decision.
@@ -111,8 +119,13 @@ docs/competition/       Agent Games submission material
 ## Competition material
 
 - [Submission overview](docs/competition/README.md)
+- [Submission TODO — the checklist](docs/competition/TODO.md)
 - [Wildcard entry draft](docs/competition/wildcard-entry.md)
 - [Creator Track content plan](docs/competition/creator-track.md)
+- [Agent Games protocol notes](docs/runproof/agentgames-protocol.md)
+- [Scenario evidence](docs/evidence/agent-games-scenarios.json)
+- [Product identity — this build vs. the original game](docs/PRODUCT-IDENTITY.md)
+- [Visual direction (proposal)](docs/design/visual-direction.md)
 - [Deployment guide](docs/DEPLOYMENT.md)
 
 ## Checks

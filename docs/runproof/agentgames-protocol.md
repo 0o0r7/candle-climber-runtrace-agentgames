@@ -1,43 +1,149 @@
-# Agent Games adapter — local readiness and Wildcard clarification
+# Agent Games protocol — what this build implements
 
-## Published protocol wording vs. Wildcard support
+This document replaces an earlier local-only readiness note. It describes the
+protocol surface that exists in the code today, the parts of the published
+protocol that remain unspecified, and how to verify the whole thing end to end.
 
-The published [Agent Games Rules](https://agentgames.zkverify.io/rules) §§1.2–1.3 describe the general hosted-agent protocol: a public HTTPS endpoint, verification of `x-agent-games-signature` on incoming requests using the registration-issued HMAC secret, signed responses, and task-ID idempotency. The [build guide](https://agentgames.zkverify.io/build) describes raw-body signature handling and a signed `agent-games.preflight.v1` handshake with response `{ "ok": true, "protocolVersion": "v1" }`. This remains the wording of the published general Rules/build material; it should not be silently rewritten as though the pages themselves state a Wildcard exception.
+Related: [submission TODO](../competition/TODO.md) ·
+[readiness requirements](../competition/READINESS.md) ·
+[product identity](../PRODUCT-IDENTITY.md)
 
-A separate Wildcard-specific support answer appears in the owner-provided Discord screenshot: Khushi, in `#general-chat` (18 November 2026; no message permalink was supplied), said HMAC-related values apply to Gatekeeper and Steal, not Wildcard, and that a public HTTPS point for a Wildcard agent is optional “here.” Treat this as a direct support clarification for Wildcard, distinct from the published general Rules/build wording. On that basis, HMAC signing, a registration-issued HMAC secret, and platform preflight are **not Wildcard blockers for this prototype**; do not claim they are required for Wildcard solely because the general build guide describes them.
+## Published wording vs. what is implemented
 
-The published [Wildcard event page](https://agentgames.zkverify.io/events/wildcard) asks for a public repository, demo, or write-up showing the agent, and lists a public HTTPS endpoint “as requested in the submission form.” It also says zkVerify is optional. The endpoint wording therefore differs from Khushi’s “optional here” support answer; preserve both sources rather than presenting either as the other’s wording. The event page does not publish a Wildcard task envelope, sample task payload, or task-ID contract. None has been supplied to this local work.
+| Topic | Official source | This build |
+| --- | --- | --- |
+| Public HTTPS endpoint | Rules §§1.2–1.3; Wildcard event page | `POST /api/agentgames` (signed tasks) and `POST /api/runproof/verify` (public verification) |
+| Inbound signature header | Rules: `x-agent-games-signature` | Verified over the exact raw request bytes before JSON parsing |
+| Signed responses | Rules §1.2 | Every response carries `x-agent-games-signature` over the exact response bytes |
+| Preflight | Build guide: `agent-games.preflight.v1` → `{ "ok": true, "protocolVersion": "v1" }` | Implemented verbatim |
+| Task-ID idempotency | Rules §1.2 | Same ID + same body → identical signed response; same ID + different body → `409` |
+| Digest algorithm, header encoding, canonicalization | **Not published** | Implemented candidate: HMAC-SHA-256 over raw bytes, UTF-8 key from the displayed secret, lowercase hex |
+| Wildcard task envelope | **Not published** | Local contract `runproof.verify.v1` (below) |
 
-## What this local code does
+Two sources disagree about whether Wildcard dispatches signed tasks at all: the
+published Rules/build material describes the general hosted-agent protocol, and
+an event-specific support answer (owner-provided Discord screenshot, 18 Nov
+2026) says HMAC and preflight apply to other tracks, not Wildcard. Both are
+recorded here rather than resolved by assumption. The signed endpoint is
+implemented so that either reading is satisfied.
 
-`src/game/cc/rival/bot.ts` and `planner.ts` provide the deterministic RivalBot: it chooses jump/RUSH actions from seed, engine state, and one of the game's existing personality profiles. It uses no LLM, network, or randomness for gameplay decisions. Optional observer hooks capture input and engine outcomes; normal game use omits those hooks.
+## The signed endpoint
 
-The RunTrace page has a one-click six-case autonomous QA suite: two synthetic seeds × three existing profiles (precise, greedy, patient), up to 1,800 fixed 60 Hz steps per case. It records the bot's actual jump/RUSH/world-transition events, engine jump/landing/score events, and final totals. RunTrace replays those captured inputs in a separate engine instance and compares the replay against the bot run's outputs.
+```
+POST /api/agentgames
+content-type: application/json
+x-agent-games-signature: <hmac-sha256 hex over the exact request body>
+```
 
-A bounded invariant layer checks finite core engine values; legal jump/RUSH/world transitions; grounded-player alignment with a live platform; and monotonic time, score, candle count, and best streak. Findings include seed, profile, ruleset, descriptive local build ID, input trace, replay report, and evidence. The build ID (`local-uncommitted-agentgames/runproof/rival-qa-v1`) is descriptive, not a source hash or signed attestation.
+Configuration: `AGENT_GAMES_HMAC_SECRET`. Without it the route answers
+`503 {"error":"agent_games_protocol_not_configured"}` — there is no key to
+verify against, and unsigned tasks are never executed.
 
-This is a deterministic rule-based game-QA agent, not an LLM. A PASS means only that the tested bot run and replay agreed and the listed invariants held; it does not prove that all game mechanics are correct or establish that judges will find this particular workflow useful.
+### Preflight
 
-`src/game/agentgames/adapter.ts` is a composable, local handler factory. It preserves bounded raw request bytes, calls an injected signature provider before parsing JSON, can return the general documented preflight response, signs outbound JSON through that provider, and applies process-local request/concurrency/rate limits. Its optional task mapping is separately injected: `createWildcardRunTraceAdapter` needs a caller-provided envelope matcher, task-ID extractor, and trace-input extractor. The local tests use a fabricated test envelope; that fixture is **not** a Wildcard envelope supplied by the event.
+```json
+{ "type": "agent-games.preflight.v1" }
+```
 
-## HMAC candidate — generic prototype detail, not a Wildcard blocker
+→ `200 {"ok":true,"protocolVersion":"v1"}`, signed.
 
-Two reviewed competitor implementations converge on HMAC-SHA-256 over exact raw request bytes, the displayed secret used as its UTF-8 key string, and lowercase hexadecimal output. `COMPETITOR_EVIDENCE_TEST_SIGNATURE_PROFILE` in `src/game/agentgames/adapter.ts` exposes that candidate. This is competitor evidence, not an official protocol definition or platform confirmation. The published general pages do not specify the digest algorithm, signature-header encoding, canonicalization details, or displayed-secret byte interpretation.
+### Verification task
 
-The candidate is opt-in/test-only, is not a default, and is not wired into the app. Tests use synthetic/local values, including an RFC 4231 vector and exact sample preflight bodies; no real registration secret is used. Because Wildcard support said HMAC and preflight are not applicable requirements for Wildcard, this unresolved general-protocol detail is not a reason to hold this Wildcard prototype or to run a preflight.
+```json
+{ "type": "runproof.verify.v1", "taskId": "<idempotency key>", "trace": <runproof/v1> }
+```
 
-Task responses in the local adapter are cached by configured task ID and exact raw-body fingerprint. Same-ID/same-body retries return the original signed response; same-ID/different-body requests get a signed conflict response. The in-memory cache is bounded at 512 entries with 24-hour retention, resets on restart, and is not shared between instances. The stateless replay handler performs no external side effects.
+→ the same report `POST /api/runproof/verify` returns, signed. The adapter
+delegates to the deterministic verifier, so the two paths cannot drift.
 
-## What remains unresolved
+This envelope is this build's own contract. Agent Games has not published a
+Wildcard envelope; when one is supplied, only
+`src/game/agentgames/tasks.ts` changes.
 
-The deterministic RivalBot closes the earlier “no autonomous agent behavior” gap in the local prototype. It is not connected to Agent Games, and the current local work has no public Agent Games repository link, demo, or published write-up: this clone has no Git remote, and its `/runproof` route is local-only. The pre-existing Candle Climber production site is separate and does not expose this local RunTrace/QA prototype. The published Wildcard page asks for a public agent link, so this is the concrete remaining submission-readiness gap. No such artifact may be published under the current local-only instruction.
+#```mermaid
+sequenceDiagram
+  autonumber
+  participant P as Agent Games platform
+  participant A as POST /api/agentgames
+  participant V as Deterministic verifier
+  participant I as Idempotency cache
 
-No Wildcard task envelope, sample request, or task-ID contract has been supplied. Consequently, the local adapter cannot be configured or end-to-end validated against an actual Wildcard task. This is an integration unknown, not a published Wildcard submission requirement on the event page; do not claim the event requires an envelope that it has not published.
+  P->>A: raw body + x-agent-games-signature
+  A->>A: verify HMAC over exact raw bytes
+  alt signature invalid
+    A-->>P: 401 signed error
+  else preflight
+    A-->>P: 200 {ok:true, protocolVersion:"v1"} signed
+  else runproof.verify.v1 task
+    A->>I: lookup taskId + body fingerprint
+    alt same ID, same body
+      I-->>A: cached signed response
+    else same ID, different body
+      A-->>P: 409 signed conflict
+    else new task
+      A->>V: replay trace
+      V-->>A: ACCEPT / FLAG + evidence
+      A->>I: store signed response
+      A-->>P: 200 signed report
+    end
+  end
+```
 
-There is no public HTTPS endpoint or deployment for this local branch. The Wildcard page lists an endpoint in its submission requirements, while Khushi’s support answer says it is optional “here.” The local-only/no-publish instruction means this work will not create one; report the source discrepancy instead of treating HMAC/preflight or endpoint hosting as an unqualified Wildcard blocker. The local process-only rate and idempotency controls would also need a shared, durable design before any horizontally scaled deployment, but no deployment is in scope.
+## Behaviour summary
 
-## Readiness decision
+| Request | Answer |
+| --- | --- |
+| Missing signature | `401` |
+| Wrong signature | `401` |
+| Body over the 2 MB streamed cap | `413` |
+| Malformed JSON | `400` |
+| Unknown task type | `400` |
+| Same task ID, same body (retry) | Original signed response, byte-identical |
+| Same task ID, different body | `409` |
+| More than 12 requests / 60 s from one client | `429` with `Retry-After` |
+| More than 2 concurrent requests in a process | `503` with `Retry-After` |
 
-**Not submission-ready in its current local-only state.** HMAC, a registration secret, and platform preflight are **not** the remaining Wildcard blockers according to the event-specific Discord support answer. The local Agent Games prototype has no public repository/demo/write-up link, while the published Wildcard page asks for a public agent link; this iteration is explicitly prohibited from publishing one. The endpoint is listed by the event page but described as optional by support, so keep that discrepancy explicit. No Wildcard envelope has been supplied, so platform-task integration cannot be demonstrated, but the event page does not list a Wildcard envelope as a submission prerequisite. Do not call the local adapter platform-integrated, production-ready, LLM-powered, zk-powered, or cryptographically verified.
+Rate limits, concurrency and the idempotency cache are **process-local**. A
+horizontally scaled deployment needs a shared store; this is documented rather
+than hidden.
 
-No hosted, paid, or deployment operation was performed. There was no Agent Games wallet connection or registration secret, no platform preflight, no on-chain signature or transaction, and no VFY spend. RunTrace itself does not use wallet APIs. Separately, an offline wallet was created during the overall task and a non-transaction test message was signed and verified locally; adapter tests used only ephemeral in-memory test values. No code, deployment, publication, registration, or submission is part of this documentation update.
+## Verifying it
+
+The scenario suite plays the game as an automated player and walks every public
+surface, including the signed protocol:
+
+```sh
+bun scripts/agent-games-scenarios.ts                                   # local
+BASE_URL=https://<deployment> bun scripts/agent-games-scenarios.ts     # deployed
+```
+
+It writes [../evidence/agent-games-scenarios.json](../evidence/agent-games-scenarios.json):
+per-scenario verdicts, latencies, the terrain hash, the recorded run's claims,
+and the issued receipt. The signing key is never written to the file.
+
+Latest local run: **14 / 14 passed**, 0 skipped, 0 failed.
+
+| Scenario | Asserts |
+| --- | --- |
+| `deployment.home`, `deployment.showcase` | Both routes serve real HTML |
+| `terrain.attested` | `/api/candles` returns candles and a run token |
+| `agent.run` | The bot completes a run with zero engine-invariant findings |
+| `verify.accept` | The public verifier returns `ACCEPT` for that trace |
+| `verify.tamper` | `+1` score returns `FLAG` |
+| `receipt.issue` / `receipt.read` | Receipt is stored, read back, and re-verifies |
+| `receipt.unattested` | A tokenless trace is refused with `422` |
+| `protocol.preflight` / `protocol.task` | Signed handshake and signed task, response signature verified |
+| `protocol.bad-signature` | Unsigned request rejected with `401` |
+| `protocol.idempotency` / `protocol.conflict` | Byte-identical retry; `409` on conflicting reuse |
+
+## What remains unknown
+
+1. **The real digest profile.** The platform does not publish the algorithm or
+   encoding. The implemented profile is the documented competitor-evidence
+   candidate; if the platform's differs, only the injected provider changes.
+2. **The Wildcard task envelope.** None has been published. The local contract
+   exists so the pipeline is exercised end to end.
+3. **Whether Wildcard sends signed tasks.** Sources disagree (see above).
+4. **Shared rate limiting.** Process-local controls are not distributed limits.
+
+None of these is presented as solved.

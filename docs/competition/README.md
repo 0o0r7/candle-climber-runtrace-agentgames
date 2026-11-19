@@ -25,10 +25,12 @@ This build is prepared for the [zkVerify Agent Games](https://agentgames.zkverif
 
 ## Pre-submission checklist
 
-- [ ] Production deployment is live and serves the game and `/runproof` (see [../DEPLOYMENT.md](../DEPLOYMENT.md)).
-- [ ] `POST /api/runproof/verify` answers on the deployed host with a valid decision for a valid trace, and `FLAG` for a tampered one.
-- [ ] The deployment URL is recorded in [wildcard-entry.md](wildcard-entry.md) and in this repository's description.
-- [ ] Repository visibility is public and the branch containing this build is the default branch.
+The authoritative, owner-annotated list is [TODO.md](TODO.md).
+
+- [x] Production deployment is live and serves the game and `/runproof` (see [../DEPLOYMENT.md](../DEPLOYMENT.md)).
+- [x] `POST /api/runproof/verify` answers on the deployed host with a valid decision for a valid trace, and `FLAG` for a tampered one.
+- [x] The deployment URL is recorded in [wildcard-entry.md](wildcard-entry.md).
+- [ ] Repository visibility is public and the branch containing this build is the default branch (currently private — owner decision).
 - [ ] Registration profile is complete: handle, country, bio, GitHub, wallet.
 - [ ] Agent endpoint registered on the platform, pointing at the deployed `/api/runproof/verify`.
 - [ ] Creator Track post published with `#AgentGames` and `@ZKVProtocol` (if entering that track).

@@ -15,6 +15,9 @@ import {
   recordVaultGrant,
   recordPracticeRun,
 } from "@/lib/weights-store";
+import { pinMemoryStores } from "./helpers/memory-store-env";
+
+pinMemoryStores();
 
 const W = "0xaaa0000000000000000000000000000000000001";
 

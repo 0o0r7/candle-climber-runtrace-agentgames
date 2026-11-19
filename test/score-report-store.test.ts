@@ -2,6 +2,11 @@
 // sanitize behavior (the Mongo store shares the same interface).
 import { describe, test, expect, beforeEach } from "bun:test";
 import { getScoreReports, type ScoreReport } from "../src/lib/score-report-store";
+import { pinMemoryStores } from "./helpers/memory-store-env";
+
+// These pins describe the in-memory store; see the helper for why the guard
+// is required when the sandbox has DATABASE_URL set.
+pinMemoryStores();
 
 const report = (over: Partial<ScoreReport> = {}): ScoreReport => ({
   name: "sus",

@@ -38,6 +38,22 @@ The page prints the "not claimed" boundary next to the evidence: no zero-knowled
 
 The verifier returns `task: "verify-run-trace"`, policy `runproof/deterministic-replay/v1`, a reason, up to four evidence lines, replay diagnostics, and the limits ([`task-contract.v1.json`](task-contract.v1.json)). The decision is deterministic TypeScript plus engine replay — not an LLM. A `FLAG` is a policy result, not an accusation.
 
+## One-command verification
+
+```sh
+bun scripts/agent-games-scenarios.ts
+BASE_URL=https://<deployment> bun scripts/agent-games-scenarios.ts
+```
+
+The suite plays today's signed market level with the deterministic pilot,
+records it at the fixed tick boundary, and walks every public surface: the
+verifier (accept + tamper), receipt issue/read/re-verify, unattested refusal,
+and the signed Agent Games protocol (preflight, task, wrong signature,
+idempotent retry, conflicting reuse). It writes
+[`../evidence/agent-games-scenarios.json`](../evidence/agent-games-scenarios.json)
+and exits non-zero if any scenario fails. Protocol details:
+[agentgames-protocol.md](agentgames-protocol.md).
+
 ## Receipts
 
 A receipt holds the verdict, the replayed run totals, the trace hash, the seed, and the full trace. `/runproof/r/{id}` shows it and offers **Re-verify now**, which posts the stored trace back to `/api/runproof/verify` and reports whether the fresh verdict matches the stored one.

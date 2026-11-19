@@ -41,8 +41,8 @@ We built an agent that plays the game and leaves a replayable trace instead. `#A
 
 **9/** That's the gap we're pointing at next: commit to a hash of the trace and the engine build, then prove the replayed final state equals the claimed final state. Turn "trust this verdict" into "check this relation". Not built yet — direction, stated as direction.
 
-**10/** Play it: `PUBLIC_URL/play`
-Run the QA suite: `PUBLIC_URL/runproof`
+**10/** Play it: `https://candle-climber-runtrace.vercel.app/play`
+Run the QA suite: `https://candle-climber-runtrace.vercel.app/runproof`
 Read the contract: repository `docs/runproof/`
 
 Built for `#AgentGames` by zkVerify — `@ZKVProtocol`

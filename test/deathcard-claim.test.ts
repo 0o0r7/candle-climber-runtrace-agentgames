@@ -12,6 +12,7 @@ import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { buildMintProofMessage, buildProofMessage, type ProofFields } from "@/lib/proof-message";
+import { PUBLIC_ORIGIN } from "@/lib/public-origin";
 import { verifyMintProof, verifyOfficialProof, PROOF_WINDOW_MS } from "@/lib/wallet-proof";
 import {
   DEATH_CARD_IMAGE_URL,
@@ -208,13 +209,14 @@ describe("metadata (honest facts only)", () => {
     });
   });
 
-  test("image URL: pinned constant, https, canonical host, and the asset is actually shipped", () => {
-    // The URL is baked into on-chain metadata forever — it must stay stable.
-    expect(DEATH_CARD_IMAGE_URL).toBe("https://candle-climber.vercel.app/nft/death-card.png");
+  test("image URL: this deployment's own origin, https, and the asset is actually shipped", () => {
+    // The URL is baked into on-chain metadata forever — it must resolve on the
+    // deployment that mints the card, never on the other ecosystem's site.
+    expect(DEATH_CARD_IMAGE_URL).toBe(`${PUBLIC_ORIGIN}/nft/death-card.png`);
     expect(DEATH_CARD_IMAGE_URL.startsWith("https://")).toBe(true);
     // Guard against a metadata image that 404s: the file the URL serves must
     // exist in public/ (same path the Vercel deploy serves).
-    const rel = DEATH_CARD_IMAGE_URL.replace("https://candle-climber.vercel.app", "");
+    const rel = DEATH_CARD_IMAGE_URL.replace(PUBLIC_ORIGIN, "");
     expect(existsSync(path.join(process.cwd(), "public", rel))).toBe(true);
   });
 

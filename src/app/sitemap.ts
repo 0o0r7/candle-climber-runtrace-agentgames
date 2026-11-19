@@ -1,8 +1,10 @@
 import type { MetadataRoute } from "next";
+import { PUBLIC_ORIGIN } from "@/lib/public-origin";
 
 // Static sitemap — the surface is small and fully known. /stats and /ops are
 // intentionally excluded (per-device local data / internal ops dashboard).
-const BASE = "https://candle-climber.vercel.app";
+// The origin is this build's own deployment, never the other ecosystem's site.
+const BASE = PUBLIC_ORIGIN;
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

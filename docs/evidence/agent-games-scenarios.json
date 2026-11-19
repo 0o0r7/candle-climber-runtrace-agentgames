@@ -1,0 +1,416 @@
+{
+  "suite": "agent-games-scenarios/v1",
+  "generatedAt": "2026-11-19T09:59:57.983Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "protocol": {
+    "task": "runproof.verify.v1",
+    "signatureProfile": "hmac-sha256/raw-body/utf8-key/lowercase-hex (local implemented choice, not a confirmed platform contract)",
+    "signingKeyConfigured": true
+  },
+  "summary": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0
+  },
+  "facts": {
+    "terrain": {
+      "seed": {
+        "date": "2026-11-19",
+        "symbol": "BTCUSDT",
+        "interval": "1w",
+        "source": "binance"
+      },
+      "candles": 219,
+      "runTokenPrefix": "eyJzeW1ib2wi",
+      "candlesHash": "f4ace6ddd66b024ee2651cdf350f792c3455931adbab342080cd77c1c9c9901b"
+    },
+    "agentRun": {
+      "profile": "wickcop",
+      "died": true,
+      "ticks": 498,
+      "inputs": 10,
+      "claims": {
+        "score": 195,
+        "candlesPassed": 14,
+        "bestStreak": 3,
+        "deathCause": "crumbled",
+        "jumpTicks": [
+          26,
+          106,
+          188,
+          265,
+          309,
+          398,
+          432
+        ],
+        "landTicks": [
+          18,
+          105,
+          185,
+          262,
+          294,
+          394,
+          429,
+          465
+        ],
+        "scoreEvents": [
+          {
+            "tick": 24,
+            "score": 15,
+            "combo": 1,
+            "candlesPassed": 1
+          },
+          {
+            "tick": 62,
+            "score": 25,
+            "combo": 0,
+            "candlesPassed": 2
+          },
+          {
+            "tick": 100,
+            "score": 35,
+            "combo": 0,
+            "candlesPassed": 3
+          },
+          {
+            "tick": 137,
+            "score": 50,
+            "combo": 1,
+            "candlesPassed": 4
+          },
+          {
+            "tick": 174,
+            "score": 70,
+            "combo": 2,
+            "candlesPassed": 5
+          },
+          {
+            "tick": 210,
+            "score": 80,
+            "combo": 0,
+            "candlesPassed": 6
+          },
+          {
+            "tick": 237,
+            "score": 95,
+            "combo": 1,
+            "candlesPassed": 7
+          },
+          {
+            "tick": 273,
+            "score": 115,
+            "combo": 2,
+            "candlesPassed": 8
+          },
+          {
+            "tick": 308,
+            "score": 140,
+            "combo": 3,
+            "candlesPassed": 9
+          },
+          {
+            "tick": 377,
+            "score": 150,
+            "combo": 0,
+            "candlesPassed": 11
+          },
+          {
+            "tick": 412,
+            "score": 165,
+            "combo": 1,
+            "candlesPassed": 12
+          },
+          {
+            "tick": 445,
+            "score": 185,
+            "combo": 2,
+            "candlesPassed": 13
+          },
+          {
+            "tick": 479,
+            "score": 195,
+            "combo": 0,
+            "candlesPassed": 14
+          }
+        ]
+      },
+      "traceHash": "6cf313e9f36da5be0d6a851272fa3b65a8ace91a1be55e62f1b06c449b79edbf"
+    },
+    "receipt": {
+      "id": "1241430f-8663-4f57-9290-4965a8b65713",
+      "url": "http://127.0.0.1:3000/runproof/r/1241430f-8663-4f57-9290-4965a8b65713",
+      "decision": "ACCEPT"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "deployment.home",
+      "title": "Home route serves the app",
+      "status": "PASS",
+      "latencyMs": 105,
+      "detail": {
+        "status": 200,
+        "bytes": 65139
+      }
+    },
+    {
+      "id": "deployment.showcase",
+      "title": "Showcase route serves the loop",
+      "status": "PASS",
+      "latencyMs": 112,
+      "detail": {
+        "status": 200,
+        "bytes": 38986
+      }
+    },
+    {
+      "id": "terrain.attested",
+      "title": "Daily level carries a server-signed run token",
+      "status": "PASS",
+      "latencyMs": 1,
+      "detail": {
+        "seed": {
+          "date": "2026-11-19",
+          "symbol": "BTCUSDT",
+          "interval": "1w",
+          "source": "binance"
+        },
+        "candles": 219,
+        "runTokenPrefix": "eyJzeW1ib2wi",
+        "candlesHash": "f4ace6ddd66b024ee2651cdf350f792c3455931adbab342080cd77c1c9c9901b"
+      }
+    },
+    {
+      "id": "agent.run",
+      "title": "Automated player completes a run",
+      "status": "PASS",
+      "latencyMs": 25,
+      "detail": {
+        "ticks": 498,
+        "inputs": 10,
+        "score": 195,
+        "candlesPassed": 14,
+        "deathCause": "crumbled"
+      }
+    },
+    {
+      "id": "verify.accept",
+      "title": "Verifier accepts the run",
+      "status": "PASS",
+      "latencyMs": 170,
+      "detail": {
+        "decision": "ACCEPT",
+        "policy": "runproof/deterministic-replay/v1",
+        "replay": {
+          "ticks": 498,
+          "score": 195,
+          "candlesPassed": 14,
+          "bestStreak": 3,
+          "deathCause": "crumbled",
+          "jumpTicks": [
+            26,
+            106,
+            188,
+            265,
+            309,
+            398,
+            432
+          ],
+          "landTicks": [
+            18,
+            105,
+            185,
+            262,
+            294,
+            394,
+            429,
+            465
+          ],
+          "scoreEvents": [
+            {
+              "tick": 24,
+              "score": 15,
+              "combo": 1,
+              "candlesPassed": 1
+            },
+            {
+              "tick": 62,
+              "score": 25,
+              "combo": 0,
+              "candlesPassed": 2
+            },
+            {
+              "tick": 100,
+              "score": 35,
+              "combo": 0,
+              "candlesPassed": 3
+            },
+            {
+              "tick": 137,
+              "score": 50,
+              "combo": 1,
+              "candlesPassed": 4
+            },
+            {
+              "tick": 174,
+              "score": 70,
+              "combo": 2,
+              "candlesPassed": 5
+            },
+            {
+              "tick": 210,
+              "score": 80,
+              "combo": 0,
+              "candlesPassed": 6
+            },
+            {
+              "tick": 237,
+              "score": 95,
+              "combo": 1,
+              "candlesPassed": 7
+            },
+            {
+              "tick": 273,
+              "score": 115,
+              "combo": 2,
+              "candlesPassed": 8
+            },
+            {
+              "tick": 308,
+              "score": 140,
+              "combo": 3,
+              "candlesPassed": 9
+            },
+            {
+              "tick": 377,
+              "score": 150,
+              "combo": 0,
+              "candlesPassed": 11
+            },
+            {
+              "tick": 412,
+              "score": 165,
+              "combo": 1,
+              "candlesPassed": 12
+            },
+            {
+              "tick": 445,
+              "score": 185,
+              "combo": 2,
+              "candlesPassed": 13
+            },
+            {
+              "tick": 479,
+              "score": 195,
+              "combo": 0,
+              "candlesPassed": 14
+            }
+          ]
+        },
+        "evidence": [
+          "Replay completed: 498 fixed ticks at 60 Hz.",
+          "Claims match replay: score 195, 14 candles passed, best streak 3.",
+          "Checked 10 input events against 219 supplied terrain candles.",
+          "Terrain matches the server-signed market level: BTCUSDT 2026-11-19 · 219 closed 1w candles."
+        ]
+      }
+    },
+    {
+      "id": "verify.tamper",
+      "title": "Verifier flags a tampered run",
+      "status": "PASS",
+      "latencyMs": 76,
+      "detail": {
+        "decision": "FLAG",
+        "reason": "Policy flagged the trace: Claimed score 196 does not match replayed score 195."
+      }
+    },
+    {
+      "id": "receipt.issue",
+      "title": "Receipt is issued for the attested run",
+      "status": "PASS",
+      "latencyMs": 649,
+      "detail": {
+        "id": "1241430f-8663-4f57-9290-4965a8b65713",
+        "url": "http://127.0.0.1:3000/runproof/r/1241430f-8663-4f57-9290-4965a8b65713",
+        "decision": "ACCEPT"
+      }
+    },
+    {
+      "id": "receipt.read",
+      "title": "Stored receipt re-verifies",
+      "status": "PASS",
+      "latencyMs": 911,
+      "detail": {
+        "id": "1241430f-8663-4f57-9290-4965a8b65713",
+        "decision": "ACCEPT",
+        "terrainAttested": true,
+        "traceHash": "6cf313e9f36da5be0d6a851272fa3b65a8ace91a1be55e62f1b06c449b79edbf",
+        "reverified": "ACCEPT"
+      }
+    },
+    {
+      "id": "receipt.unattested",
+      "title": "Receipt endpoint refuses unattested terrain",
+      "status": "PASS",
+      "latencyMs": 82,
+      "detail": {
+        "status": 422
+      }
+    },
+    {
+      "id": "protocol.preflight",
+      "title": "Signed preflight handshake",
+      "status": "PASS",
+      "latencyMs": 465,
+      "detail": {
+        "status": 200,
+        "body": {
+          "ok": true,
+          "protocolVersion": "v1"
+        },
+        "responseSigned": true
+      }
+    },
+    {
+      "id": "protocol.task",
+      "title": "Signed verification task",
+      "status": "PASS",
+      "latencyMs": 79,
+      "detail": {
+        "status": 200,
+        "decision": "ACCEPT",
+        "responseSigned": true
+      }
+    },
+    {
+      "id": "protocol.bad-signature",
+      "title": "Unsigned task is rejected",
+      "status": "PASS",
+      "latencyMs": 82,
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "id": "protocol.idempotency",
+      "title": "Repeated task returns the same signed answer",
+      "status": "PASS",
+      "latencyMs": 167,
+      "detail": {
+        "identicalBody": true,
+        "identicalSignature": true
+      }
+    },
+    {
+      "id": "protocol.conflict",
+      "title": "Reused task ID with a new body is refused",
+      "status": "PASS",
+      "latencyMs": 195,
+      "detail": {
+        "status": 409
+      }
+    }
+  ]
+}
