@@ -180,8 +180,13 @@ easiest to overdo.
    broad but shallow change.
 2. **Shell.** New header/footer with the build's own name, a route switcher
    (`Play · Console · Showcase`), and a persistent origin/verification chip.
-3. **Landing (`/`).** Lead with the claim, not the token: one sentence, the
-   pipeline diagram, a live receipt link, then the game.
+3. **Landing (`/`).** *Done 2026-11-19.* Lead with the claim, not the token:
+   one sentence, the pipeline diagram, a live receipt link, then the game. The
+   page is rebuilt on `src/components/landing/Landing{Nav,Hero}.tsx` +
+   `PipelineSection`, `WickSection`, `ReceiptTeaser` with the `.rl-*` block in
+   `globals.css`; the old `$WICK` strip, partner/airdrop links and the game
+   banner hero are gone, and the display voice is the console mono. The game
+   sections below the receipt (modes, how-to-play, features) are kept as-is.
 4. **Console (`/runproof`) and showcase.** Restyle panels; keep all behaviour
    and copy. Evidence and verdicts become the visual hierarchy.
 5. **Receipt (`/runproof/r/{id}`).** The certificate treatment, with copy-link
