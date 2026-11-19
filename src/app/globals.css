@@ -1945,12 +1945,13 @@ button.cc-chip-pausebtn:hover { color: var(--cc-lime); border-color: rgba(204, 2
 html { scroll-behavior: smooth; }
 
 .lp-root {
-  --lp-bg: #08090C;
-  --lp-card: #0F1216;
-  --lp-hairline: #1E252B;
-  /* direction A: the accent is the protocol violet; the token name is kept so
-     every existing rule reads the new value. */
-  --lp-lime: #8B5CF6;
+  /* Visual DNA (Candle Climber master reference): charcoal canvas, lime accent,
+     green = up/safe, coral = down/danger. Violet stays a secondary accent only. */
+  --lp-bg: #101214;
+  --lp-card: #16191C;
+  --lp-hairline: #24282C;
+  --lp-lime: #CCFF00;
+  --lp-violet: #6A63C8;
   --lp-up: #5BD08A;
   --lp-down: #E07856;
   --lp-faint: #8A969E; /* G5: AA contrast on dark */
@@ -2023,20 +2024,20 @@ html { scroll-behavior: smooth; }
   font-weight: 600;
   font-size: 16px;
   letter-spacing: 0.06em;
-  color: #0B0714;
+  color: #0E1400;
   background: var(--lp-lime);
   border: 1px solid var(--lp-lime);
   border-radius: 12px;
   padding: 12px 28px;
   text-decoration: none;
   transition: transform 0.12s, background 0.15s, box-shadow 0.15s;
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 20px rgba(204, 255, 0, 0.2);
 }
 .lp-btn-primary:hover {
   transform: translateY(-2px);
-  background: #9F7BFF;
-  border-color: #9F7BFF;
-  box-shadow: 0 0 36px rgba(139, 92, 246, 0.4);
+  background: #D9FF4D;
+  border-color: #D9FF4D;
+  box-shadow: 0 0 36px rgba(204, 255, 0, 0.4);
 }
 .lp-btn-sm {
   font-size: 13px;
@@ -2110,7 +2111,7 @@ html { scroll-behavior: smooth; }
 }
 .lp-hero-title .lime {
   color: var(--lp-lime);
-  text-shadow: 0 0 24px rgba(139, 92, 246, 0.35);
+  text-shadow: 0 0 24px rgba(204, 255, 0, 0.35);
 }
 .lp-hero-sub {
   font-family: var(--lp-ui);
@@ -2198,7 +2199,7 @@ html { scroll-behavior: smooth; }
   transition: border-color 0.15s, transform 0.12s;
 }
 .lp-howto-card:hover {
-  border-color: rgba(139, 92, 246, 0.28);
+  border-color: rgba(204, 255, 0, 0.28);
   transform: translateY(-2px);
 }
 .lp-howto-icon {
@@ -2211,7 +2212,7 @@ html { scroll-behavior: smooth; }
 }
 .lp-howto-icon.green { background: rgba(91, 208, 138, 0.12); color: var(--lp-up); }
 .lp-howto-icon.red { background: rgba(224, 120, 86, 0.12); color: var(--lp-down); }
-.lp-howto-icon.lime { background: rgba(139, 92, 246, 0.1); color: var(--lp-lime); }
+.lp-howto-icon.lime { background: rgba(204, 255, 0, 0.1); color: var(--lp-lime); }
 .lp-howto-icon.faint { background: rgba(94, 99, 107, 0.12); color: #8A9099; }
 .lp-howto-label {
   font-family: var(--lp-display);
@@ -2233,8 +2234,8 @@ html { scroll-behavior: smooth; }
   font-weight: 700;
   letter-spacing: 0.1em;
   color: var(--lp-lime);
-  background: rgba(139, 92, 246, 0.08);
-  border: 1px solid rgba(139, 92, 246, 0.25);
+  background: rgba(204, 255, 0, 0.08);
+  border: 1px solid rgba(204, 255, 0, 0.25);
   border-radius: 6px;
   padding: 2px 8px;
   margin: 0 2px;
@@ -2255,7 +2256,7 @@ html { scroll-behavior: smooth; }
   transition: border-color 0.15s, transform 0.12s;
 }
 .lp-feature-card:hover {
-  border-color: rgba(139, 92, 246, 0.28);
+  border-color: rgba(204, 255, 0, 0.28);
   transform: translateY(-2px);
 }
 .lp-feature-tag {
@@ -2284,7 +2285,7 @@ html { scroll-behavior: smooth; }
 .lp-cta {
   text-align: center;
   padding: 100px 24px;
-  background: linear-gradient(180deg, transparent, rgba(139, 92, 246, 0.025));
+  background: linear-gradient(180deg, transparent, rgba(204, 255, 0, 0.025));
   border-top: 1px solid var(--lp-hairline);
 }
 .lp-cta-title {
@@ -2294,7 +2295,7 @@ html { scroll-behavior: smooth; }
   letter-spacing: -0.02em;
   color: #fff;
 }
-.lp-cta-title .lime { color: var(--lp-lime); text-shadow: 0 0 24px rgba(139, 92, 246, 0.35); }
+.lp-cta-title .lime { color: var(--lp-lime); text-shadow: 0 0 24px rgba(204, 255, 0, 0.35); }
 .lp-cta-sub {
   font-family: var(--lp-ui);
   font-size: 15px;
@@ -2411,8 +2412,8 @@ html { scroll-behavior: smooth; }
 }
 .lp-demo-badge-live {
   color: var(--lp-lime);
-  border-color: rgba(139, 92, 246, 0.3);
-  background: rgba(139, 92, 246, 0.06);
+  border-color: rgba(204, 255, 0, 0.3);
+  background: rgba(204, 255, 0, 0.06);
 }
 /* current weather zone of the demo run */
 .lp-demo-zone {
@@ -2433,7 +2434,7 @@ html { scroll-behavior: smooth; }
 /* the arriving weather zone beats once in the HUD, so a zone change in the
    demo reads as an intended weather shift rather than a glitch */
 @keyframes lp-demo-zone-in {
-  from { color: var(--lp-lime); border-color: rgba(139, 92, 246, 0.45); }
+  from { color: var(--lp-lime); border-color: rgba(204, 255, 0, 0.45); }
   to { color: #AEB6BC; border-color: var(--lp-hairline); }
 }
 .lp-demo-zone-in { animation: lp-demo-zone-in 1.6s ease-out; }
@@ -2513,8 +2514,8 @@ html { scroll-behavior: smooth; }
   box-shadow: 0 0 32px rgba(91, 208, 138, 0.1);
 }
 .lp-mode-launchpad:hover {
-  border-color: rgba(139, 92, 246, 0.4);
-  box-shadow: 0 0 32px rgba(139, 92, 246, 0.12);
+  border-color: rgba(204, 255, 0, 0.4);
+  box-shadow: 0 0 32px rgba(204, 255, 0, 0.12);
 }
 .lp-mode-stocks:hover {
   border-color: rgba(96, 165, 250, 0.45);
@@ -2666,22 +2667,24 @@ a.cc-btn { text-decoration: none; display: inline-flex; align-items: center; jus
    ============================================================ */
 
 .rt-root {
-  --rt-bg: #08090c;
-  --rt-panel: #0f1216;
-  --rt-panel-2: #12161b;
-  --rt-hairline: #1e252b;
-  --rt-hairline-strong: #2a343c;
+  /* Visual DNA: the console sits on the product canvas, and its accent is the
+     lime brand colour — green stays reserved for up/safe, coral for down/danger. */
+  --rt-bg: #101214;
+  --rt-panel: #16191c;
+  --rt-panel-2: #1b1f23;
+  --rt-hairline: #24282c;
+  --rt-hairline-strong: #2e3438;
   --rt-ink: #e8eef2;
   --rt-ink-2: #c7d0d6;
   --rt-muted: #8a969e;
   --rt-muted-2: #b3bdc4;
-  --rt-pass: #7cffb2;
+  --rt-pass: #5bd08a;
   --rt-pass-line: #2e5a44;
   --rt-pass-ink: #04120a;
   --rt-flag: #ffb86b;
   --rt-flag-line: #6b3a2e;
-  --rt-accent: #8b5cf6;
-  --rt-accent-ink: #0b0714;
+  --rt-accent: #ccff00;
+  --rt-accent-ink: #0e1400;
   --rt-disabled: #39434b;
   --rt-mono: var(--font-mono-cc), ui-monospace, SFMono-Regular, Menlo, monospace;
   --rt-prose: "Instrument Sans", system-ui, -apple-system, sans-serif;
@@ -2709,7 +2712,7 @@ a.cc-btn { text-decoration: none; display: inline-flex; align-items: center; jus
   flex-wrap: wrap;
   gap: 10px 16px;
   padding: 12px 20px;
-  background: rgba(8, 9, 12, 0.92);
+  background: rgba(16, 18, 20, 0.92);
   border-bottom: 1px solid var(--rt-hairline);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -2786,6 +2789,48 @@ a.cc-btn { text-decoration: none; display: inline-flex; align-items: center; jus
   border-radius: 999px;
   background: var(--rt-accent);
   vertical-align: middle;
+}
+
+/* Mascot moment — one per screen, always beside the label, never behind body
+   copy. Wick is the product's character; the verdict and the hash stay the
+   evidence. */
+.rt-mascot {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--rt-hairline-strong);
+  border-radius: 8px;
+  background: var(--rt-panel-2);
+  overflow: hidden;
+}
+
+.rt-mascot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.rt-bot-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--rt-hairline);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font: 500 10px/1 var(--rt-mono);
+  letter-spacing: 0.12em;
+  color: var(--rt-muted-2);
+  white-space: nowrap;
+}
+
+.rt-bot-badge::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--rt-pass);
 }
 
 .rt-page {

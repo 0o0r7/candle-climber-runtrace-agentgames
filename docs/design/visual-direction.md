@@ -2,9 +2,53 @@
 
 Status: **implemented** — the owner chose **A (Verification Console) with B's
 receipt page** on 2026-11-19. Tokens, the protocol shell, the console/showcase
-palette, and the receipt certificate are in the build; the mascot step is still
-open and is not a blocker. The reasoning below is kept as the record of the
-decision.
+palette, and the receipt certificate are in the build. The owner's mascot
+package arrived the same day and is now applied (see "Adopted visual DNA"
+below), so step 6 of the plan is done. The reasoning below is kept as the
+record of the decision.
+
+## Adopted visual DNA (owner package, 2026-11-19)
+
+Source of truth: the owner's `CANDLE-CLIMBER-VISUAL-DNA-MASTER-FA.md`,
+`official-mascot-manifest.json`, the labelled character sheet and four pose
+PNGs (profile `OWNER-REBRIEF-A`, blockbot in cream/sand with a teal faceplate,
+lime head bands, an orange-brown backpack and a small companion). The package
+itself records that the repository docs are **not reconciled** with this
+profile; the code follows the package for brand art, and nothing in it claims a
+different identity.
+
+Palette now in the build (`src/app/globals.css`, `.lp-root` and `.rt-root`):
+
+| Token | Value | Role |
+| --- | --- | --- |
+| canvas | `#101214` | page and console background |
+| panel | `#16191C` | cards and panels |
+| hairline | `#24282C` | grid lines and quiet borders |
+| accent | `#CCFF00` | brand lime: CTAs, eyebrows, links, focus ring |
+| up / safe | `#5BD08A` | pass verdicts, up candles — never decoration |
+| down / danger | `#E07856` | crumble, down candles |
+| secondary | `#6A63C8` | kept for secondary emphasis only |
+
+The accent was previously the direction-A violet; it is now the DNA lime, with
+violet demoted to a secondary accent. Green stays reserved for up/safe and
+coral for down/danger, and status is always also carried by text (PASS / FLAG,
+labels), never by colour alone.
+
+Mascot moments (one per screen, never behind body copy, never replacing the
+verdict or the hash): the console and showcase heroes carry Wick as a small
+framed avatar next to their eyebrow label. Assets are web derivatives of the
+package's 1920×1920 RGBA poses, generated with `sharp`:
+
+- `public/brand/wick-climb.webp` (512, used as the avatar)
+- `public/brand/wick-hero.webp` (700, hero/wave)
+- `public/brand/wick-victory.webp` (512)
+- `public/brand/wick-falling.webp` (512, coral debris = danger)
+- `public/brand/wick-sheet.webp` (1600, labelled character board, reference only)
+
+The archive's 26 PNGs are RGB with the checkerboard baked into the pixels, so
+they are **not** embedded anywhere; only the transparent derivatives above are.
+The game canvas keeps its own palette — this remains a shell and design-system
+change.
 
 ## Why a redesign is required
 

@@ -412,7 +412,7 @@ export default function RunTraceConsole() {
   };
 
   const buttonStyle: CSSProperties = {
-    background: "var(--rt-pass)",
+    background: "var(--rt-accent)",
     border: 0,
     borderRadius: 6,
     color: "var(--rt-pass-ink)",
@@ -433,7 +433,12 @@ export default function RunTraceConsole() {
 
   return (
     <ProtocolShell active="console" width={1000}>
-        <p style={{ color: "var(--rt-pass)", font: `700 12px ${MONO}`, letterSpacing: ".13em", margin: "0 0 8px" }}>VERIFIED RUN RECEIPTS</p>
+        <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: 10, margin: "0 0 10px" }}>
+          <span className="rt-mascot" style={{ width: 36, height: 36 }}>
+            <img src="/brand/wick-climb.webp" alt="Wick, the Candle Climber blockbot" width={36} height={36} />
+          </span>
+          <p style={{ color: "var(--rt-accent)", font: `700 12px ${MONO}`, letterSpacing: ".13em", margin: 0 }}>VERIFIED RUN RECEIPTS</p>
+        </div>
         <h1 style={{ fontSize: "clamp(30px, 6vw, 52px)", letterSpacing: "-.04em", lineHeight: 1, margin: "0 0 12px" }}>RunTrace</h1>
         <p style={{ color: "var(--rt-muted-2)", lineHeight: 1.6, margin: "0 0 20px", maxWidth: 780 }}>
           Play today&apos;s market chart, then have the server replay your run. A run whose inputs reproduce its own score becomes a
@@ -441,7 +446,7 @@ export default function RunTraceConsole() {
           cannot be moved to a different chart.
         </p>
         <p style={{ font: `12px ${MONO}`, margin: "0 0 20px" }}>
-          <a href="/runproof/showcase" style={{ color: "var(--rt-pass)" }}>WATCH THE SHOWCASE LOOP ↗</a>
+          <a href="/runproof/showcase" style={{ color: "var(--rt-accent)" }}>WATCH THE SHOWCASE LOOP ↗</a>
           <span style={{ color: "var(--rt-muted)" }}> — an agent plays today&apos;s signed level on a verified replay loop.</span>
         </p>
 
@@ -487,7 +492,7 @@ export default function RunTraceConsole() {
           />
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: 16 }}>
             {phase !== "running" && (
-              <button onClick={startRun} disabled={!canPlay} style={{ ...buttonStyle, background: canPlay ? "var(--rt-pass)" : "var(--rt-disabled)" }}>
+              <button onClick={startRun} disabled={!canPlay} style={{ ...buttonStyle, background: canPlay ? "var(--rt-accent)" : "var(--rt-disabled)" }}>
                 {phase === "finished" ? "PLAY ANOTHER RUN" : "START RUN"}
               </button>
             )}
@@ -577,7 +582,7 @@ export default function RunTraceConsole() {
             score/counters, then compares the bot&apos;s run outputs with an independent replay. This is a regression agent, not an
             LLM, anti-cheat, or identity check.
           </p>
-          <button disabled={qaRunning || verifying || phase === "running"} onClick={runRivalQa} style={{ ...buttonStyle, background: qaRunning ? "var(--rt-disabled)" : "var(--rt-pass)" }}>
+          <button disabled={qaRunning || verifying || phase === "running"} onClick={runRivalQa} style={{ ...buttonStyle, background: qaRunning ? "var(--rt-disabled)" : "var(--rt-accent)" }}>
             {qaRunning ? "RUNNING SIX CASES…" : "RUN SIX-CASE RIVALBOT QA SUITE"}
           </button>
           {qaError && <p role="alert" style={{ color: "var(--rt-flag)", marginBottom: 0 }}>{qaError}</p>}

@@ -480,7 +480,13 @@ export default function RunTraceShowcase() {
 
   return (
     <ProtocolShell active="showcase" width={1120}>
-        <p style={{ color: "var(--rt-pass)", font: `700 12px ${MONO}`, letterSpacing: ".13em", margin: "0 0 8px" }}>RUNTRACE · SHOWCASE LOOP</p>
+        <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: 10, margin: "0 0 12px" }}>
+          <span className="rt-mascot" style={{ width: 56, height: 56 }}>
+            <img src="/brand/wick-climb.webp" alt="Wick, the Candle Climber blockbot, mid-climb" width={56} height={56} />
+          </span>
+          <p style={{ color: "var(--rt-accent)", font: `700 12px ${MONO}`, letterSpacing: ".13em", margin: 0 }}>RUNTRACE · SHOWCASE LOOP</p>
+          <span className="rt-bot-badge">BOT PLAYING · AUTOPILOT</span>
+        </div>
         <h1 style={{ fontSize: "clamp(28px, 6vw, 48px)", letterSpacing: "-.04em", lineHeight: 1.02, margin: "0 0 12px" }}>
           Real gameplay, verified on loop
         </h1>
@@ -530,7 +536,7 @@ export default function RunTraceShowcase() {
                 onClick={() => void loadTerrain()}
                 disabled={stage === "loading"}
                 style={{
-                  background: stage === "loading" ? "var(--rt-disabled)" : "var(--rt-pass)",
+                  background: stage === "loading" ? "var(--rt-disabled)" : "var(--rt-accent)",
                   border: "none",
                   borderRadius: 6,
                   color: "var(--rt-accent-ink)",
