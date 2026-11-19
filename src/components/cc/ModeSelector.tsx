@@ -1,21 +1,22 @@
 "use client";
 
 /**
- * Mode selector — three chart pools (council 2026-10-12, ruling B):
+ * Mode selector — two chart pools:
  *
- * CRYPTO    — established crypto assets (Binance watchlist + CoinGecko top-30)
- * STOCKS    — real equities (Yahoo/Stooq weekly rails, on-chain Chainlink check)
- * LAUNCHPAD — VibeVibe on-chain token launches (CurveBuy/CurveSell terrain)
+ * CRYPTO — established crypto assets (Binance watchlist + CoinGecko top-30)
+ * STOCKS — real equities (Yahoo/Stooq weekly rails, on-chain Chainlink check)
+ *
+ * Terrain is always weekly (1w). LAUNCHPAD was removed 2026-11-19.
  *
  * The toggle persists the player's choice (cc_mode_v2) and calls back so
  * GameCanvas can re-fetch the level from the appropriate data source.
- * v1 migration: "market" → "crypto", "launchpad" → "launchpad" — one-time,
+ * v1 migration: "market" → "crypto", legacy "launchpad" → "crypto" — one-time,
  * read-only, so old saved prefs and old deep links keep working.
  */
 
-export type GameMode = "crypto" | "stocks" | "launchpad";
+export type GameMode = "crypto" | "stocks";
 
-export const GAME_MODES: readonly GameMode[] = ["crypto", "stocks", "launchpad"];
+export const GAME_MODES: readonly GameMode[] = ["crypto", "stocks"];
 
 export function isGameMode(v: unknown): v is GameMode {
   return typeof v === "string" && (GAME_MODES as readonly string[]).includes(v);
@@ -29,12 +30,9 @@ export function loadMode(): GameMode {
     const saved = localStorage.getItem(MODE_KEY);
     if (isGameMode(saved)) return saved;
     // One-time v1 migration — read the legacy key, translate, persist under v2.
+    // A saved "launchpad" pref falls back to crypto now that the mode is gone.
     const legacy = localStorage.getItem(LEGACY_KEY);
-    if (legacy === "launchpad") {
-      localStorage.setItem(MODE_KEY, "launchpad");
-      return "launchpad";
-    }
-    if (legacy === "market") {
+    if (legacy === "launchpad" || legacy === "market") {
       localStorage.setItem(MODE_KEY, "crypto");
       return "crypto";
     }
@@ -55,7 +53,7 @@ export function saveMode(mode: GameMode): void {
 /** Legacy v1 values that may still arrive via deep links (?mode=market). */
 export function normalizeModeParam(v: string | null): GameMode | null {
   if (isGameMode(v)) return v;
-  if (v === "market") return "crypto"; // v1 deep-link compat
+  if (v === "market" || v === "launchpad") return "crypto"; // v1 deep-link compat
   return null;
 }
 
@@ -84,15 +82,6 @@ export default function ModeSelector({ mode, onChange }: ModeSelectorProps) {
       >
         <span className="cc-mode-icon" aria-hidden>🏦</span>
         STOCKS
-      </button>
-      <button
-        role="tab"
-        aria-selected={mode === "launchpad"}
-        className={`cc-mode-btn${mode === "launchpad" ? " cc-mode-active" : ""}`}
-        onClick={() => onChange("launchpad")}
-      >
-        <span className="cc-mode-icon" aria-hidden>🚀</span>
-        LAUNCHPAD
       </button>
     </div>
   );

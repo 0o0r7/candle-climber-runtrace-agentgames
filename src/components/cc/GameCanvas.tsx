@@ -5,7 +5,7 @@ import { Engine, VIEW_W, VIEW_H } from "@/game/cc/engine";
 import { buildPlatforms } from "@/game/cc/level";
 import { dailyMutation, type Mutation } from "@/game/cc/mutations";
 import { marketStats, fmtPct } from "@/game/cc/market";
-import { pickSeed, syntheticCandles, LIMIT, ALL_SYMBOLS, INTERVALS, isInterval, stocksRotation, provenanceLabel, type GameInterval } from "@/game/cc/level-source";
+import { pickSeed, syntheticCandles, LIMIT, ALL_SYMBOLS, isInterval, stocksRotation, provenanceLabel, type GameInterval } from "@/game/cc/level-source";
 import { utcDateStr } from "@/game/cc/rng";
 import MiniChart from "@/components/cc/MiniChart";
 import ArchiveBrowser from "@/components/cc/ArchiveBrowser";
@@ -139,7 +139,6 @@ const RIVAL_KEY = "cc_rival_v1"; // P3.1: remembered rivalry tag
 // (legacy per-key prefs cc_mute_v1 / cc_vsbot_v1 / cc_ghost_v1 are migrated
 // into cc_settings_v1 by settings-context — no direct reads remain here)
 const RUNS_KEY = "cc_runs_v1";
-const TF_KEY = "cc_tf_v1"; // P3.5: remembered timeframe ("1w" classic default)
 const DUEL_TALLY_KEY = "cc_duel_v1"; // P7.3: local duel W-L-D tally (no server identity exists)
 const REF_KEY = "cc_ref_v1"; // E5.5: referral attribution — last ?ref= landing param on this device
 // E5.5: every traveling text carries a measurable link (shareUrl/shareRef
@@ -218,9 +217,8 @@ export default function GameCanvas() {
   // P3.5: deep-link pins parsed once by the init effect, consumed by the loader
   const requestedSymRef = useRef("");
   const requestedDateRef = useRef<string | null>(null);
-  const launchRef = useRef(false);
-  const [tf, setTf] = useState<GameInterval>("1w"); // timeframe selector
-  const [mode, setMode] = useState<GameMode>("crypto"); // 3-mode: crypto | stocks | launchpad
+  const tf: GameInterval = "1w"; // terrain period — weekly-only (1d/4h/1h recuts removed 2026-11-19)
+  const [mode, setMode] = useState<GameMode>("crypto"); // 2-mode: crypto | stocks
   const [booted, setBooted] = useState(false); // init ran → loader may fetch
   // R-1 (docs/RETIRED-FEATURES.md): the character-SELECTION UI was retired
   // 2026-10-15 by owner directive — everyone climbs as CLASSIC. The ref still
@@ -357,7 +355,6 @@ export default function GameCanvas() {
       // past terrain = practice duel (W1 staleness stays authoritative: the
       // archive run itself stays unscored, the duel verdict stays local)
       setArchive(isArchiveDate(ch.date, utcDateStr()));
-      setTf(ch.interval);
       setDuel(ch);
       return true;
     } catch {
@@ -376,11 +373,12 @@ export default function GameCanvas() {
     if (settings.muted) setMuted(true);
     setVolume(settings.volume);
     // optional deep links (whitelist-checked; the server still pins the terrain
-    // and issues the run token): /play?symbol=ETHUSDT opens that chart,
-    // /play?source=launch plays the vibe/vibe launch-of-the-day level,
-    // /play?date=<past UTC date> plays the archive (H1), and /play?interval=1h|4h|1d
-    // pins the timeframe (P3.5) — famous history as terrain. (P0 2026-10-29:
-    // links are minted at /play; legacy "/" deep links are forwarded by middleware.)
+    // and issues the run token): /play?symbol=ETHUSDT opens that chart and
+    // /play?date=<past UTC date> plays the archive (H1) — famous history as
+    // terrain. Terrain is always weekly (1w); the old ?interval= recut and
+    // ?source=launch deep links were removed with the launchpad mode.
+    // (P0 2026-10-29: links are minted at /play; legacy "/" deep links are
+    // forwarded by middleware.)
     const params = new URLSearchParams(window.location.search);
     setV2(params.get("renderer") !== "v1"); // default v2; only explicit v1 downgrades (promoted 2026-10-10)
     wreckDBRef.current = loadWreckDB(); // H3: this device's death map
@@ -393,26 +391,18 @@ export default function GameCanvas() {
     setArchive(isArch);
     requestedSymRef.current = ALL_SYMBOLS.includes(requested) ? requested : "";
     requestedDateRef.current = requestedDate;
-    launchRef.current = !isArch && params.get("source") === "launch"; // single whitelisted value
-    const reqIv = params.get("interval"); // P3.5: deep link beats the saved pref
-    if (isInterval(reqIv)) setTf(reqIv);
-    else if (isInterval(localStorage.getItem(TF_KEY))) setTf(localStorage.getItem(TF_KEY) as GameInterval);
     // P7.1/P7.2: SOLO-vs-bot and ghost toggles live in the settings store now
     // (cc_settings_v1 — settings-context migrates the legacy cc_vsbot_v1 /
     // cc_ghost_v1 keys). The mirror effect below keeps RAF refs + UI in sync.
-    // 3-mode: ?mode=<crypto|stocks|launchpad> is the canonical deep link from
-    // the landing page's mode selector (legacy "market" maps to "crypto").
-    // ?source=launch stays for backward compat (legacy links). Persisted pref
-    // (cc_mode_v2, auto-migrated from v1) is the fallback for bare /play visits.
+    // 2-mode: ?mode=<crypto|stocks> is the canonical deep link from the
+    // landing page's mode selector (legacy "market"/"launchpad" map to
+    // "crypto"). Persisted pref (cc_mode_v2, auto-migrated from v1) is the
+    // fallback for bare /play visits.
     const urlMode = params.get("mode");
-    const urlSource = params.get("source");
     const normalizedMode = normalizeModeParam(urlMode);
     if (normalizedMode) {
       setMode(normalizedMode);
       saveMode(normalizedMode);
-    } else if (urlSource === "launch") {
-      setMode("launchpad");
-      saveMode("launchpad");
     } else {
       setMode(loadMode());
     }
@@ -445,29 +435,24 @@ export default function GameCanvas() {
     setGraduated(false);
     setWorld2(false);
     const isArch = archive;
-    const isLaunchpad = mode === "launchpad" && !isArch && !duelLockRef.current;
-    // STOCKS mode clamps the effective timeframe to "1w": the equity rails
-    // (Yahoo/Stooq weekly) have no intraday feed — the server already pins
-    // "1w" for stocks, so the client pins its board/ghost queries to the SAME
-    // interval instead of asking for a 4h board on a 1w terrain. The saved tf
-    // pref is untouched and applies again when the player returns to CRYPTO.
+    // Every mode plays weekly (1w) terrain — the timeframe selector is gone,
+    // so the board/ghost queries always use the same interval the server
+    // serves. isStocks only picks the stock pool below.
     const isStocks = mode === "stocks" && !isArch && !duelLockRef.current;
     const effTf: GameInterval = isStocks ? "1w" : tf;
     ghostRef.current = null; // terrain switch invalidates the previous ghost
     const query = new URLSearchParams();
     if (requestedSymRef.current) query.set("symbol", requestedSymRef.current);
     if (isArch && requestedDateRef.current) query.set("date", requestedDateRef.current); // server re-validates (past dates only)
-    if (launchRef.current || isLaunchpad) query.set("source", "launch");
     if (!isArch) query.set("interval", effTf);
     // 3-mode: the pool param scopes the DEFAULT daily symbol to the mode's
     // own rotation (crypto / stocks) — pinned deep-link symbols still win.
     if (!isArch && mode === "stocks") query.set("pool", "stocks");
     else if (!isArch && mode === "crypto") query.set("pool", "crypto");
     const qs = query.toString();
-    // Launchpad Mode: fetch from the dedicated /api/launchpad endpoint (on-chain
-    // indexer); CRYPTO/STOCKS modes: the standard /api/candles feed chain with
-    // the mode's pool.
-    const fetchUrl = isLaunchpad ? "/api/launchpad" : `/api/candles${qs ? `?${qs}` : ""}`;
+    // CRYPTO/STOCKS modes: the standard /api/candles feed chain with the
+    // mode's pool.
+    const fetchUrl = `/api/candles${qs ? `?${qs}` : ""}`;
     fetch(fetchUrl)
       .then((r) => r.json())
       .then((d: CandleData) => {
@@ -479,9 +464,9 @@ export default function GameCanvas() {
         refreshSelfGhost(d); // P2: mirror this terrain's own best ghost (if any)
         setPhase("ready");
         if (!isArch) {
-          // G5 (129-c #7): boards follow the TERRAIN's timeframe, not the raw
-          // selector — a launchpad run lands on the 1w board and a CoinGecko
-          // run on the 1d board, so refreshing ?interval=<selector> made the
+          // G5 (129-c #7): boards follow the TERRAIN's timeframe — a CoinGecko
+          // fallback run lands on the 1d board while the weekly feed lands on
+          // the 1w board, so refreshing with a fixed selector made the
           // submitted run invisible on the board shown right after landing.
           const seedIv = isInterval(d.seed.interval) ? d.seed.interval : effTf;
           fetch(`/api/leaderboard?date=${d.seed.date}&interval=${seedIv}`)
@@ -555,17 +540,8 @@ export default function GameCanvas() {
     return () => { alive = false; };
   }, [tf, archive, booted, mode]);
 
-  // P3.5: timeframe switch — persist and let the loader effect re-fetch
-  const changeTf = useCallback((iv: GameInterval) => {
-    setTf((cur) => {
-      if (iv !== cur) localStorage.setItem(TF_KEY, iv);
-      return iv;
-    });
-  }, []);
-
-  // Two-mode became three (council 2026-10-12 B): CRYPTO/STOCKS/LAUNCHPAD —
-  // switching persists (cc_mode_v2) and triggers the loader effect to re-fetch
-  // from the mode's own pool.
+  // Two modes (CRYPTO/STOCKS): switching persists (cc_mode_v2) and triggers
+  // the loader effect to re-fetch from the mode's own pool.
   const changeMode = useCallback((m: GameMode) => {
     setMode(m);
     saveMode(m);
@@ -1194,9 +1170,9 @@ export default function GameCanvas() {
     if (!result || !data || submitting || !data.runToken) return;
     // The interval the terrain was actually served with — G5 (129-c #7):
     // every seed now carries a concrete timeframe that matches its signed
-    // token (stocks pin "1w", CoinGecko "1d", launchpad "1w"), so the fallback
-    // below is legacy-defensive only. Proof messages and board/ghost refreshes
-    // name the PLAYED interval, never the raw selector state.
+    // token (stocks pin "1w", CoinGecko "1d"), so the fallback below is
+    // legacy-defensive only. Proof messages and board/ghost refreshes name the
+    // PLAYED interval, never a UI selector.
     const subIv: GameInterval = isInterval(data.seed.interval) ? data.seed.interval : tf;
     setSubmitting(true);
     try {
@@ -1606,13 +1582,6 @@ export default function GameCanvas() {
     </p>
   ) : null;
   const unscoredMsg = archive ? ARCHIVE_MSG : UNSCORED_MSG;
-  // P3.5 gates: timeframe chips show on crypto dailies only — stock rails have
-  // no intraday feed, launch terrain is derived, archive stays weekly (V1).
-  const canPickTf = Boolean(
-    data && !archive && !duel &&
-    data.seed.source !== "stooq" && data.seed.source !== "yahoo" &&
-    data.seed.source !== "vibe-launch" && data.seed.source !== "robinhood",
-  );
   // Option B: rival/lead context follows THIS device's lane (official with a
   // linked wallet, guest otherwise) — both boards stay labeled on the panel.
   const myLane = hasWallet ? officialBoard : topBoard;
@@ -1777,7 +1746,7 @@ export default function GameCanvas() {
               <p className="cc-tag">the chart is the level</p>
               <ModeSelector mode={mode} onChange={changeMode} />
               <div className="cc-daily">
-                <span className="cc-daily-label" title={archive ? "Real history — practice terrain" : "Levels reset at 00:00 UTC"}>{archive ? "ARCHIVE CHART · PRACTICE" : mode === "launchpad" ? "LAUNCHPAD · ON-CHAIN" : mode === "stocks" ? "TODAY'S STOCK · UTC" : "TODAY'S CHART · UTC"}</span>
+                <span className="cc-daily-label" title={archive ? "Real history — practice terrain" : "Levels reset at 00:00 UTC"}>{archive ? "ARCHIVE CHART · PRACTICE" : mode === "stocks" ? "TODAY'S STOCK · UTC" : "TODAY'S CHART · UTC"}</span>
                 <span className="cc-daily-symbol">{data.seed.symbol}</span>
                 <span className="cc-daily-src">{data.seed.source === "binance" || data.seed.source === "stooq" || data.seed.source === "yahoo" || data.seed.source === "coingecko" ? "live data" : data.seed.source === "vibe-launch" ? "vibe launch" : data.seed.source === "robinhood" ? "official on-chain price" : "synthetic"}</span>
               </div>
@@ -1829,28 +1798,9 @@ export default function GameCanvas() {
                     <span className={mutation.id === "clean" ? "cc-mut-name" : "cc-mut-name hot"}>{mutation.name}</span>
                     <span className="cc-mut-tag">{mutation.tagline}</span>
                   </div>
-                  {/* P3.5 timeframe selector — owner proposal. Crypto dailies only:
-                      stock rails have no intraday feed, launch terrain is derived,
-                      archive stays weekly (V1) — all three hide the chips. */}
+                  {/* Terrain is weekly-only — the 1d/4h/1h chart-period chips were
+                      removed 2026-11-19 (one board, one terrain). */}
                   <div className="cc-sec-title">MODES &amp; EXTRAS</div>
-                  {canPickTf && (
-                    <div className="cc-tf-row" role="group" aria-label="Chart period — recuts the day's chart into candles">
-                      {INTERVALS.map((iv) => (
-                        <button
-                          key={iv}
-                          className={`cc-tf-chip${tf === iv ? " cc-tf-on" : ""}`}
-                          onClick={() => changeTf(iv)}
-                          aria-pressed={tf === iv}
-                          title={iv === "1w" ? "weekly candles — the classic level" : iv === "1d" ? "daily candles" : iv === "4h" ? "4-hour candles" : "1-hour candles"}
-                        >
-                          {iv.toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {canPickTf && (
-                    <p className="cc-vs-note">CHART PERIOD — recuts the day&apos;s chart into candles. Each period is its own terrain and its own board.</p>
-                  )}
                   {/* P7.1 rival bot — local SOLO/VS toggle. Default SOLO: existing
                       behavior + QA flows are 100% unchanged; choice persists. The
                       rival is a local headless engine — zero network, never scored. */}

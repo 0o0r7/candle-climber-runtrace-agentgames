@@ -8,7 +8,6 @@
 import type { Metadata } from "next";
 import { getBoard, type BoardEntry } from "@/lib/leaderboard-store";
 import { SEASONS, currentSeason } from "@/lib/seasons";
-import { isInterval } from "@/game/cc/level-source";
 
 export const dynamic = "force-dynamic"; // live store reads — never prerender at build
 
@@ -20,7 +19,6 @@ export const metadata: Metadata = {
 
 const SCOPES = ["daily", "season", "alltime"] as const;
 const LANES = ["guest", "official"] as const;
-const INTERVALS = ["1w", "1d", "4h"] as const;
 type Scope = (typeof SCOPES)[number];
 type Lane = (typeof LANES)[number];
 
@@ -37,8 +35,8 @@ export default async function LeaderboardPage({
   const sp = await searchParams;
   const scope = pick(sp.scope, SCOPES, "daily") as Scope;
   const board = pick(sp.board, LANES, "official") as Lane;
-  const intervalRaw = pick(sp.interval, INTERVALS, "1w");
-  const interval = isInterval(intervalRaw) ? intervalRaw : "1w";
+  // Terrain is weekly-only (1w) — the 1d/4h boards were removed 2026-11-19.
+  const interval = "1w";
 
   const store = getBoard();
   const today = new Date().toISOString().slice(0, 10);
@@ -86,13 +84,6 @@ export default async function LeaderboardPage({
           {LANES.map((l) => (
             <a key={l} className={`cc-lb-tab${l === board ? " on" : ""}`} href={href({ board: l })}>
               {l.toUpperCase()}
-            </a>
-          ))}
-        </nav>
-        <nav className="cc-lb-tabs" aria-label="timeframe">
-          {INTERVALS.map((iv) => (
-            <a key={iv} className={`cc-lb-tab${iv === interval ? " on" : ""}`} href={href({ interval: iv })}>
-              {iv.toUpperCase()}
             </a>
           ))}
         </nav>
