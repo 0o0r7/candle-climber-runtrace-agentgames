@@ -101,8 +101,8 @@ note in this file explaining what changed and why.
 
 **Trigger.** Owner challenge (2026-10-10): typed-name identity is too weak for real
 competition; a game with no real economy risks being disposable; economy is the priority.
-Owner then delegated the pending decision in plain words: "خودت تصمیم بگیر — تصمیمی که در
-راستای برطرف کردن نگرانی‌های من و نواقص محصول و تکمیل آن باشد." The council had already
+Owner then delegated the pending decision in plain words: "Decide this yourself — choose
+what resolves my concerns, closes the product's gaps, and completes the product." The council had already
 re-convened on his three arguments (OWNER-BRIEF + STOCK-TOKENS-DEEP-DIVE, same date) and
 graded **Option B** as the recommended lawful path; this note records its adoption under
 the owner's delegation. Per LAW 5.3, this is the dated-note amendment path.

@@ -254,7 +254,13 @@ class MongoStore implements BoardStore {
         try {
           await coll.createIndex(
             { board: 1, wallet: 1, date: 1, interval: 1 },
-            { unique: true, partialFilterExpression: { board: "official" } },
+            {
+              // Explicit name: the auto-generated name would collide with the
+              // identical-key lookup index above (IndexOptionsConflictError).
+              name: "official_best_per_wallet_unique",
+              unique: true,
+              partialFilterExpression: { board: "official" },
+            },
           );
         } catch (idxErr) {
           console.error("[leaderboard] unique official-lane index not created (existing dupes?):", (idxErr as Error).message);

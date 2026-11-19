@@ -2,7 +2,7 @@
 // CAMERA-FRAME contract v3 (owner report 2026-10-11, three passes:
 // "high jump pushes the candles/playfield out of the frame" → asymmetric
 // follow → "STILL exits" → drift budget + render zoom → OWNER REJECTED v2:
-// «تصویر دیگه روان نیست، لگ میزنه، غیر طبیعی شده» — the budget machinery plus
+// "the rendering no longer feels smooth — it stutters and feels unnatural" — the budget machinery plus
 // the double-applied render zoom broke the frame's smoothness).
 //
 // v3 = the ORIGINAL single-lerp camera with the takeoff-platform guard folded

@@ -31,7 +31,7 @@ export const CAM_ACCEL = 3.2; // was 5.5 — the climb heats up slower
 export const CAM_MAX = 400; // was 470 — late-game still tense, no longer frantic
 // CAMERA-FRAME v3 (owner report 2026-10-11, third pass): the v2 machinery
 // (per-arc drift budget + render-time zoom-out) made the frame lag and feel
-// unnatural — owner: «تصویر دیگه روان نیست و لگ میزنه». Reverted to the ONE
+// unnatural — owner report: "the rendering no longer feels smooth; it stutters." Reverted to the ONE
 // law the game shipped with: a single CAM_LERP chase toward `desired`, with
 // the takeoff-platform guard folded INTO the target via Math.max —
 //   desired = max(py - 0.52*VIEW_H, lastGroundY - VIEW_H + CAM_GROUND_STRIP)
