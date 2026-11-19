@@ -1,4 +1,5 @@
 import { createWildcardRunTraceAdapter } from "./adapter";
+import { createGatekeeperTaskAdapter } from "./gatekeeper";
 
 /**
  * This build's task envelope for the RunTrace verifier.
@@ -28,4 +29,29 @@ export function createRunProofTaskAdapter() {
     },
     traceInput: (envelope) => (isRecord(envelope) ? envelope.trace : null),
   });
+}
+
+/**
+ * Composite task adapter for the events this agent is registered for: the
+ * Wildcard RunTrace verifier (local contract) plus the platform's Proof
+ * Gatekeeper envelopes (agent-games.proof-gatekeeper.v1), which the registered
+ * agent answers decision-only. Routing is by envelope type, so the two
+ * contracts never collide.
+ */
+export function createAgentGamesTaskAdapter() {
+  const runproof = createRunProofTaskAdapter();
+  const gatekeeper = createGatekeeperTaskAdapter();
+  return {
+    matches(envelope: unknown): boolean {
+      return runproof.matches(envelope) || gatekeeper.matches(envelope);
+    },
+    getTaskId(envelope: unknown): string | null {
+      if (gatekeeper.matches(envelope)) return gatekeeper.getTaskId(envelope);
+      return runproof.getTaskId(envelope);
+    },
+    handle(envelope: unknown): unknown | Promise<unknown> {
+      if (gatekeeper.matches(envelope)) return gatekeeper.handle(envelope);
+      return runproof.handle(envelope);
+    },
+  };
 }

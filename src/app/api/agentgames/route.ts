@@ -19,7 +19,7 @@ import {
   createAgentGamesHttpHandler,
   encodeDisplayedSecretAsUtf8KeyForCompetitorEvidenceProfile,
 } from "@/game/agentgames/adapter";
-import { createRunProofTaskAdapter } from "@/game/agentgames/tasks";
+import { createAgentGamesTaskAdapter } from "@/game/agentgames/tasks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ const handler = secret
   ? createAgentGamesHttpHandler({
       secretBytes: encodeDisplayedSecretAsUtf8KeyForCompetitorEvidenceProfile(secret),
       signatures: COMPETITOR_EVIDENCE_TEST_SIGNATURE_PROFILE.signatures,
-      taskAdapter: createRunProofTaskAdapter(),
+      taskAdapter: createAgentGamesTaskAdapter(),
     })
   : null;
 
