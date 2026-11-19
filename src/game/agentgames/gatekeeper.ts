@@ -105,7 +105,8 @@ function asBigUint(v: unknown, field: string): bigint {
  * sample uses "minimum"; the competition brief also names a "threshold" field —
  * both are accepted with minimum taking precedence when both are present.
  */
-function normalizeTask(envelope: Record<string, unknown>): NormalizedTask {
+function normalizeTask(envelope: unknown): NormalizedTask {
+  if (!isRecord(envelope)) throw new MalformedTaskError("body is not a JSON object");
   const taskId = envelope["task_id"];
   if (typeof taskId !== "string" || taskId.length === 0) throw new MalformedTaskError("task_id missing or not a string");
   if (!isRecord(envelope["input"])) throw new MalformedTaskError("input missing or not an object");
