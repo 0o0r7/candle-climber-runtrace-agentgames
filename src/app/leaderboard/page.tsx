@@ -8,6 +8,7 @@
 import type { Metadata } from "next";
 import { getBoard, type BoardEntry } from "@/lib/leaderboard-store";
 import { SEASONS, currentSeason } from "@/lib/seasons";
+import { displayName } from "@/lib/callsign";
 
 export const dynamic = "force-dynamic"; // live store reads — never prerender at build
 
@@ -101,7 +102,7 @@ export default async function LeaderboardPage({
               <div key={`${e.ts}-${e.name}-${i}`} className="cc-lb-row">
                 <span className={`cc-lb-rank${i < 3 ? " top" : ""}`}>#{i + 1}</span>
                 <span className="cc-lb-name">
-                  {e.name}
+                  {displayName(e)}
                   {board === "official" && e.wallet ? <i>{e.wallet}</i> : null}
                 </span>
                 <span className="cc-lb-score">{e.score.toLocaleString()}</span>
@@ -113,8 +114,9 @@ export default async function LeaderboardPage({
 
         <p className="cc-lb-foot">
           guest scores are self-reported and unverified — official rows carry a
-          cryptographic wallet proof. seasons never gate play (free, walletless,
-          forever). no real funds.
+          cryptographic wallet proof. rows with no typed name show a generated
+          handle (it is not a player identity). seasons never gate play (free,
+          walletless, forever). no real funds.
         </p>
         <div className="cc-stats-actions">
           <a className="cc-page-btn" href="/">PLAY TODAY&apos;S CHART</a>

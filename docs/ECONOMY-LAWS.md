@@ -183,5 +183,21 @@ existing lanes (LAW 5.1 gate: docs/PR-CHECKLIST.md):
 - Suite 329 → 346 (`test/e5-e6.test.ts` pins gate truth table + all four freeze paths).
 
 ---
+## DATED NOTE 2026-11-19 — generated handles for nameless board rows (presentation only)
+
+**Trigger.** Owner request: rows with no typed name — the server's `ANON` fallback and
+test-fixture names like `REPLAY` — all render as the same word, so the board stops reading
+as a list of runs.
+
+**What changes (display only).** `src/lib/callsign.ts` derives a DETERMINISTIC handle
+(themed prefix + 4-char hash tail, e.g. `CLIMBER-7Q2F`) from a row's own stored fields
+(name/ts/symbol/score), applied at read time in `GET /api/leaderboard` and on
+`/leaderboard`. Stored rows are untouched and a name a player actually typed is never
+rewritten — only nameless/placeholder rows are affected. The guest lane stays labeled
+unverified/unofficial and the board footnote states the handle is not a player identity:
+no official/wallet identity is implied (LAW 4 honesty lines), no score, lane or weights
+logic is touched (LAW 1.1/1.3 intact). Contract pinned by `test/callsign.test.ts`.
+
+---
 *Adopted: 2026-10-06 · Related process docs live in the project's
 private archive.*
