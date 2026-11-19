@@ -361,7 +361,7 @@ export default function RunProofDemo() {
   return (
     <main style={{ minHeight: "100vh", background: "#090b0d", color: "#f1f3f4", fontFamily: "system-ui, sans-serif", padding: "24px 16px 48px" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-        <p style={{ color: "#ccff00", font: "700 12px ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: ".13em", margin: "0 0 8px" }}>CONTEST BRANCH · LOCAL ONLY</p>
+        <p style={{ color: "#ccff00", font: "700 12px ui-monospace, SFMono-Regular, Menlo, monospace", letterSpacing: ".13em", margin: "0 0 8px" }}>CONTEST BUILD · DETERMINISTIC REPLAY</p>
         <h1 style={{ fontSize: "clamp(30px, 6vw, 52px)", letterSpacing: "-.04em", lineHeight: 1, margin: "0 0 12px" }}>RunTrace</h1>
         <p style={{ color: "#b5bbc1", lineHeight: 1.6, margin: "0 0 20px", maxWidth: 760 }}>
           <strong style={{ color: "#f1f3f4" }}>Deterministic replay-consistency check. No cryptographic proof.</strong> RunTrace records fixed-tick inputs and replays them against this branch&apos;s Candle Climber engine, returning an ACCEPT or FLAG with concise reason and evidence. Its optional RivalBot QA suite is also deterministic rule-based code, not an AI/LLM model.

@@ -1,28 +1,34 @@
-# docs/ — what to read
+# Documentation index
 
-> Index refreshed 2026-10-15 (public-repo hygiene pass). Internal strategy,
-> ecosystem intel and owner-facing status documents live in the project's
-> **private archive** — this index lists only the public, product-facing docs.
+Two groups only: the game this build ships, and the competition entry it is prepared for.
 
-## Source of truth (public)
+## Game
 
-| Question | Read |
-|---|---|
-| Which public claims are actually true, and why | [`TRUTH-TABLE.md`](TRUTH-TABLE.md) |
-| Every data feed: URL, cadence, failure mode, honesty label | [`FEEDS.md`](FEEDS.md) |
-| The official Robinhood Chain connection + raw evidence | [`ROBINHOOD-CHAIN-INTEGRATION.md`](ROBINHOOD-CHAIN-INTEGRATION.md) |
-| Economy rules and laws (fairness, language red lines) | [`ECONOMY-LAWS.md`](ECONOMY-LAWS.md) |
-| Game design + technical plan | [`GAME_DESIGN.md`](GAME_DESIGN.md) |
-| The Death Card NFT: contract, metadata, immutability caveats | [`DEATHCARD-NFT-TESTNET-NOTE.md`](DEATHCARD-NFT-TESTNET-NOTE.md) |
-| Zero-cost infrastructure map | [`INFRASTRUCTURE.md`](INFRASTRUCTURE.md) |
-| Visual system and asset pipeline | [`ART-DIRECTION.md`](ART-DIRECTION.md) · [`ART_PROMPTS_V2.md`](ART_PROMPTS_V2.md) |
-| Retired layers and why they stay retired | [`RETIRED-FEATURES.md`](RETIRED-FEATURES.md) |
-| Input/UX research behind the engine feel | [`PLATFORMER-UX-RESEARCH.md`](PLATFORMER-UX-RESEARCH.md) |
-| Review gates for every PR | [`PR-CHECKLIST.md`](PR-CHECKLIST.md) |
-| Persian glossary for chat | [`GLOSSARY-FA.md`](GLOSSARY-FA.md) |
+| Document | Contents |
+| --- | --- |
+| [GAME_DESIGN.md](GAME_DESIGN.md) | Core loop, mechanics, scoring, modes |
+| [FEEDS.md](FEEDS.md) | Market data feeds, symbols, failure modes and fallbacks |
+| [ECONOMY-LAWS.md](ECONOMY-LAWS.md) | Economy invariants the code enforces |
+| [TRUTH-TABLE.md](TRUTH-TABLE.md) | What the product claims, and what it explicitly does not |
+| [ROBINHOOD-CHAIN-INTEGRATION.md](ROBINHOOD-CHAIN-INTEGRATION.md) | On-chain price reads and chain integration |
+| [DEATHCARD-NFT-TESTNET-NOTE.md](DEATHCARD-NFT-TESTNET-NOTE.md) | Death-card NFT contract notes (testnet) |
+| [evidence/](evidence/) | Recorded snapshots referenced by the code |
 
-### Language policy
+## RunTrace
 
-Product/docs: English. Owner-facing chat: Persian. Public repo content stays
-free of strategy, roadmap promises and platform-intel material by design —
-that material lives in the private archive.
+| Document | Contents |
+| --- | --- |
+| [runproof/README.md](runproof/README.md) | Prototype scope, honesty boundary, request controls |
+| [runproof/agentgames-protocol.md](runproof/agentgames-protocol.md) | Published Agent Games protocol vs. Wildcard support clarification |
+| [runproof/trace-schema.v1.json](runproof/trace-schema.v1.json) | `runproof/v1` trace input schema |
+| [runproof/task-contract.v1.json](runproof/task-contract.v1.json) | Verification result contract |
+| [runproof/storyboard-draft.md](runproof/storyboard-draft.md) | Social copy storyboard (unpublished draft) |
+
+## Competition
+
+| Document | Contents |
+| --- | --- |
+| [competition/README.md](competition/README.md) | Entry status, what is submitted, pre-submission checklist |
+| [competition/wildcard-entry.md](competition/wildcard-entry.md) | Wildcard entry text: problem, users, build, evidence |
+| [competition/creator-track.md](competition/creator-track.md) | Creator Track content plan and thread draft |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Production deployment (Vercel) and environment variables |
