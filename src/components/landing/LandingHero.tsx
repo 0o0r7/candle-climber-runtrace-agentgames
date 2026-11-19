@@ -5,21 +5,24 @@ import Link from "next/link";
  * inside a specimen frame (direction A's signature detail): the game is a
  * specimen under a protocol, not the whole product.
  */
-const BARS = [
-  { h: 18, up: true },
-  { h: 34, up: true },
-  { h: 26, up: false },
-  { h: 44, up: true },
-  { h: 30, up: true },
-  { h: 20, up: false },
-  { h: 52, up: true },
-  { h: 38, up: false },
-  { h: 58, up: true },
-  { h: 46, up: true },
-  { h: 28, up: false },
-  { h: 64, up: true },
-  { h: 50, up: false },
-  { h: 40, up: true },
+// Today's level, drawn as the chart it is: a body per candle plus its wick.
+// Deterministic (no Math.random) so the server and client render the same
+// picture. Heights are % of the chart band.
+const CANDLES = [
+  { body: 16, up: true, wickTop: 8, wickBottom: 6 },
+  { body: 30, up: true, wickTop: 10, wickBottom: 8 },
+  { body: 22, up: false, wickTop: 6, wickBottom: 12 },
+  { body: 40, up: true, wickTop: 12, wickBottom: 6 },
+  { body: 27, up: true, wickTop: 6, wickBottom: 9 },
+  { body: 18, up: false, wickTop: 7, wickBottom: 5 },
+  { body: 48, up: true, wickTop: 14, wickBottom: 6 },
+  { body: 34, up: false, wickTop: 8, wickBottom: 10 },
+  { body: 56, up: true, wickTop: 12, wickBottom: 7 },
+  { body: 42, up: true, wickTop: 9, wickBottom: 6 },
+  { body: 25, up: false, wickTop: 6, wickBottom: 11 },
+  { body: 62, up: true, wickTop: 16, wickBottom: 6 },
+  { body: 45, up: false, wickTop: 10, wickBottom: 8 },
+  { body: 38, up: true, wickTop: 7, wickBottom: 6 },
 ];
 
 const RAIL = [
@@ -89,22 +92,38 @@ export default function LandingHero() {
             <span className="rl-tick rl-tick--tr" aria-hidden="true" />
             <span className="rl-tick rl-tick--bl" aria-hidden="true" />
             <span className="rl-tick rl-tick--br" aria-hidden="true" />
-            <div className="rl-bars" aria-hidden="true">
-              {BARS.map((bar, index) => (
+
+            <div className="rl-chart" aria-hidden="true">
+              {CANDLES.map((candle, index) => (
                 <span
                   key={index}
-                  className={bar.up ? "rl-bar rl-bar--up" : "rl-bar rl-bar--down"}
-                  style={{ height: `${bar.h}%` }}
-                />
+                  className={candle.up ? "rl-candle is-up" : "rl-candle is-down"}
+                  style={{ height: `${candle.body}%` }}
+                >
+                  <i
+                    className="rl-candle-wick"
+                    style={{ top: `-${candle.wickTop}px`, bottom: `-${candle.wickBottom}px` }}
+                  />
+                </span>
               ))}
             </div>
+
+            <span className="rl-score-pop" aria-hidden="true">
+              +120
+            </span>
+
             <img
               src="/brand/wick-hero.webp"
-              alt="Wick, the Candle Climber mascot, standing on the chart"
+              alt="Wick, the Candle Climber mascot, standing on today's chart"
               width={700}
               height={700}
               className="rl-wick"
             />
+            <span className="rl-wick-shadow" aria-hidden="true" />
+
+            <span className="rl-verdict-stamp" aria-hidden="true">
+              VERDICT · ACCEPT
+            </span>
           </div>
 
           <div className="rl-specimen-foot">

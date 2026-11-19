@@ -484,12 +484,23 @@ export default function RunTraceConsole() {
               REFRESH LEVEL
             </button>
           </div>
-          <canvas
-            ref={canvasRef}
-            aria-label="RunTrace run canvas"
-            onPointerDown={onCanvasPointerDown}
-            style={{ aspectRatio: `${VIEW_W} / ${VIEW_H}`, background: "var(--rt-bg)", display: "block", touchAction: "none", width: "100%" }}
-          />
+          <div style={{ position: "relative" }}>
+            <canvas
+              ref={canvasRef}
+              aria-label="RunTrace run canvas"
+              onPointerDown={onCanvasPointerDown}
+              style={{ aspectRatio: `${VIEW_W} / ${VIEW_H}`, background: "var(--rt-bg)", display: "block", touchAction: "none", width: "100%" }}
+            />
+            {/* The idle canvas is a still frame by design (nothing is being
+                recorded). Say so, instead of leaving a chart that reads as a
+                frozen game: the run starts when you press START RUN. */}
+            {phase === "idle" && !terrainLoading && (
+              <div className="rt-idle-hint" aria-hidden="true">
+                <i className="rt-idle-dot" />
+                READY — PRESS START RUN TO RECORD A REAL 60 HZ RUN
+              </div>
+            )}
+          </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: 16 }}>
             {phase !== "running" && (
               <button onClick={startRun} disabled={!canPlay} style={{ ...buttonStyle, background: canPlay ? "var(--rt-accent)" : "var(--rt-disabled)" }}>

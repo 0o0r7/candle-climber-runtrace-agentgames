@@ -26,6 +26,13 @@ Two deployments exist and they are deliberately separate:
    Robinhood Chain) is not part of this entry's claims. This build describes
    only what its own code does — see the honesty boundary in
    [runproof/README.md](runproof/README.md).
+5. **Separate surfaces.** `src/lib/build-surface.ts` holds
+   `SHOW_TOKEN_ECONOMY = false`: the in-game holder vault, death-card mint and
+   token rails are hidden here, and the game footer links this build's own
+   routes (`home · console · showcase · leaderboard · stats · privacy · terms`)
+   with `deterministic replay · no zk proof` instead of the other site's
+   ecosystem row. Engine, scoring, boards, duels and receipts are untouched —
+   the constant gates presentation only.
 
 ## What is shared
 

@@ -12,6 +12,9 @@ import ArchiveBrowser from "@/components/cc/ArchiveBrowser";
 import WalletChip from "@/components/cc/WalletChip";
 import PredictionPanel from "@/components/cc/PredictionPanel";
 import { WALLET_ADDRESS_KEY, isValidAddress } from "@/lib/wallet";
+// Product surface (docs/PRODUCT-IDENTITY.md): this build ships the game +
+// RunTrace; the other deployment's token/vault/death-card economy is hidden.
+import { SHOW_TOKEN_ECONOMY } from "@/lib/build-surface";
 // LAW 1.2 hardening: official-lane ownership proof — the browser builds the
 // EXACT message the server verifies (isomorphic template, no crypto import)
 import { buildProofMessage, buildMintProofMessage, buildWalletLinkProofMessage } from "@/lib/proof-message";
@@ -2015,8 +2018,12 @@ export default function GameCanvas() {
             {verdict && <p className="cc-vs-verdict" role="status">{verdict}</p>}
             <div className="cc-death-actions">
               <button className="cc-btn cc-btn-start" onClick={enterWorld2}>WORLD 2 →</button>
-              <button className="cc-btn cc-btn-ghost" onClick={downloadCard}>DEATH CARD ↓</button>
-              {mintBtn}
+              {SHOW_TOKEN_ECONOMY && (
+                <>
+                  <button className="cc-btn cc-btn-ghost" onClick={downloadCard}>DEATH CARD ↓</button>
+                  {mintBtn}
+                </>
+              )}
               <button
                 className="cc-btn"
                 onClick={submitScore}
@@ -2028,9 +2035,9 @@ export default function GameCanvas() {
               </button>
               <button className="cc-btn" onClick={startRun}>RETRY</button>
             </div>
-            {mintNote}
+            {SHOW_TOKEN_ECONOMY && mintNote}
             <p className="cc-grad-next">world 2: the climb continues · gains ×2</p>
-            {reachedPeak && (
+            {SHOW_TOKEN_ECONOMY && reachedPeak && (
               <button className="cc-btn" onClick={openVault} disabled={vaultBusy} title="peak wick reached — holder vault: +1 weight + a trail for today">
                 {vaultBusy ? "…" : "OPEN WICK VAULT"}
               </button>
@@ -2096,8 +2103,12 @@ export default function GameCanvas() {
                 {submitting ? "…" : "SUBMIT SCORE"}
                 {!canSubmit && <span className="sr-only">{unscoredMsg}</span>}
               </button>
-              <button className="cc-btn cc-btn-ghost" onClick={downloadCard}>DEATH CARD ↓</button>
-              {mintBtn}
+              {SHOW_TOKEN_ECONOMY && (
+                <>
+                  <button className="cc-btn cc-btn-ghost" onClick={downloadCard}>DEATH CARD ↓</button>
+                  {mintBtn}
+                </>
+              )}
               {canSubmit && data?.seed.source !== "vibe-launch" && !duelCode && (
                 <button
                   className="cc-btn"
@@ -2115,9 +2126,9 @@ export default function GameCanvas() {
                 <HomeGlyph size={13} />HOME
               </a>
             </div>
-            {mintNote}
+            {SHOW_TOKEN_ECONOMY && mintNote}
             {archive && practiceNote && <p className="cc-vault-note" role="status">{practiceNote}</p>}
-            {reachedPeak && (
+            {SHOW_TOKEN_ECONOMY && reachedPeak && (
               <button className="cc-btn" onClick={openVault} disabled={vaultBusy} title="peak wick reached — holder vault: +1 weight + a trail for today">
                 {vaultBusy ? "…" : "OPEN WICK VAULT"}
               </button>
@@ -2171,27 +2182,21 @@ export default function GameCanvas() {
       <footer className="cc-footer">
         <WalletChip />
         <span aria-hidden>·</span>
-        <a href="/" className="cc-foot-home" aria-label="Candle Climber home"><HomeGlyph size={11} />home</a>
+        <a href="/" className="cc-foot-home" aria-label="RunTrace home"><HomeGlyph size={11} />home</a>
         <span aria-hidden>·</span>
-        <a href="https://testnet.vibevibe.fun/" target="_blank" rel="noopener noreferrer">vibe/vibe testnet</a>
+        <a href="/runproof">console</a>
         <span aria-hidden>·</span>
-        <a href="https://faucet.testnet.chain.robinhood.com/" target="_blank" rel="noopener noreferrer">faucet</a>
-        <span aria-hidden>·</span>
-        <a href="https://discord.gg/vibevibebuilders" target="_blank" rel="noopener noreferrer">discord</a>
-        <span aria-hidden>·</span>
-        <a href="/airdrop">airdrop board</a>
-        <span aria-hidden>·</span>
-        <a href="/partners">partners</a>
-        <span aria-hidden>·</span>
-        <a href="/stats">stats</a>
+        <a href="/runproof/showcase">showcase</a>
         <span aria-hidden>·</span>
         <a href="/leaderboard">leaderboard</a>
+        <span aria-hidden>·</span>
+        <a href="/stats">stats</a>
         <span aria-hidden>·</span>
         <a href="/privacy">privacy</a>
         <span aria-hidden>·</span>
         <a href="/terms">terms</a>
         <span aria-hidden>·</span>
-        <span>no real funds</span>
+        <span>deterministic replay · no zk proof</span>
       </footer>
 
       {/* Sweep 4 (2026-10-14, D8): the Settings/Achievements triggers used to
