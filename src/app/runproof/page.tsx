@@ -1,11 +1,10 @@
-import RunProofDemo from "@/components/runproof/RunProofDemo";
+import RunTraceConsole from "@/components/runproof/RunTraceConsole";
 
 export const metadata = {
-  title: "RunTrace — deterministic replay-consistency check",
-  description: "A local replay-consistency check; no cryptographic proof.",
-  robots: { index: false, follow: false },
+  title: "RunTrace — verified run receipts",
+  description: "Play today's market chart; the server replays the run and issues a shareable receipt.",
 };
 
 export default function RunProofPage() {
-  return <RunProofDemo />;
+  return <RunTraceConsole />;
 }

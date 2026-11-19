@@ -18,7 +18,7 @@ This build is prepared for the [zkVerify Agent Games](https://agentgames.zkverif
 | Requirement | Where it is satisfied |
 | --- | --- |
 | Agent link — public repository, demo, or write-up | This repository plus the deployed demo route `/runproof` |
-| Public HTTPS endpoint for the agent | `POST /api/runproof/verify` on the deployment |
+| Public HTTPS endpoint for the agent | `POST /api/runproof/verify` and the receipt routes `POST/GET /api/runproof/runs` on the deployment |
 | Use case — problem, users, behaviour | [wildcard-entry.md](wildcard-entry.md) |
 | Build context — how it works, key decisions | [wildcard-entry.md](wildcard-entry.md) and [../runproof/README.md](../runproof/README.md) |
 | zkVerify (optional) | Not included; see "What is not claimed" below |
@@ -40,7 +40,7 @@ The submission must not overstate the system. Specifically, this build:
 
 - produces **no** zero-knowledge proof and submits **nothing** to zkVerify;
 - verifies replay consistency only, and cannot establish who produced a trace;
-- runs on synthetic, editable terrain fixtures, not live market data;
+- attests the terrain with a server-signed run token, but cannot authenticate the player or the input origin;
 - is a game QA and replay-consistency tool, not anti-cheat or identity verification.
 
 Wildcard does not require zkVerify, so the absence of a proof layer is a missed optional plus, not a disqualification. The entry is written to make the boundary explicit rather than blur it.

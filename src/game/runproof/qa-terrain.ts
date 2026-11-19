@@ -1,11 +1,16 @@
 import type { Candle } from "../cc/types";
 import { hashString, mulberry32 } from "../cc/rng";
 
-export const DEMO_SEED = { date: "2026-11-14", symbol: "RUNPROOF" } as const;
-export const DEMO_TERRAIN_KIND = "synthetic-local-demo-fixture";
+// Deterministic terrain for the autonomous QA suite and contract tests.
+// It is NOT market data: the QA agent needs a stable, dependency-free level so
+// a regression is attributable to the code under test. Real runs on the
+// RunTrace console use market candles from GET /api/candles instead.
 
-/** Stable fictional OHLC fixture; this is not market data. */
-export function makeDemoCandles(count = 72): Candle[] {
+export const QA_SEED = { date: "2026-11-14", symbol: "RUNPROOF" } as const;
+export const QA_TERRAIN_KIND = "qa-fixture-terrain";
+
+/** Stable fictional OHLC fixture used only by the QA suite and tests. */
+export function makeQaCandles(count = 72): Candle[] {
   const random = mulberry32(hashString("runproof-demo-terrain/v1"));
   const rows: Candle[] = [];
   let previous = 100;

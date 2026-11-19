@@ -1,18 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:candle-climber:runproof:trace:v1",
-  "title": "RunTrace prototype trace v1 (runproof/v1 wire format)",
+  "title": "RunTrace run trace v1 (runproof/v1 wire format)",
   "type": "object",
-  "required": ["format", "prototype", "seed", "terrain", "mutationId", "ticks", "inputs", "claims"],
+  "required": ["format", "seed", "terrain", "mutationId", "ticks", "inputs", "claims"],
   "properties": {
     "format": { "const": "runproof/v1" },
-    "prototype": { "const": true },
     "recorder": {
       "type": "object",
       "required": ["format", "id", "version", "tickHz"],
       "properties": {
         "format": { "const": "cc-fixed-tick-input/v1" },
-        "id": { "enum": ["candle-climber-runproof-demo", "candle-climber-runtrace-rival-qa"] },
+        "id": { "enum": ["candle-climber-runtrace", "candle-climber-runtrace-rival-qa"] },
         "version": { "const": 1 },
         "tickHz": { "const": 60 }
       },
@@ -52,6 +51,12 @@
         }
       },
       "additionalProperties": false
+    },
+    "runToken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "description": "Server-issued HMAC from GET /api/candles binding symbol+date+terrain. When present the verifier recomputes the terrain fingerprint; when absent the terrain is reported as unattested."
     },
     "mutationId": { "type": "string" },
     "ticks": { "type": "integer", "minimum": 1, "maximum": 7200 },

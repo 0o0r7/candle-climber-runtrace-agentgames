@@ -18,7 +18,7 @@ Two groups only: the game this build ships, and the competition entry it is prep
 
 | Document | Contents |
 | --- | --- |
-| [runproof/README.md](runproof/README.md) | Prototype scope, honesty boundary, request controls |
+| [runproof/README.md](runproof/README.md) | RunTrace product scope, terrain attestation, receipts, limits |
 | [runproof/agentgames-protocol.md](runproof/agentgames-protocol.md) | Published Agent Games protocol vs. Wildcard support clarification |
 | [runproof/trace-schema.v1.json](runproof/trace-schema.v1.json) | `runproof/v1` trace input schema |
 | [runproof/task-contract.v1.json](runproof/task-contract.v1.json) | Verification result contract |

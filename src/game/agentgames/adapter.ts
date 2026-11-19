@@ -1,7 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { clientIp } from "../../lib/http-limiter";
 import { readCappedJsonBody, RunProofRequestGuard, RUNPROOF_MAX_BODY_BYTES } from "../runproof/http-guard";
-import { verifyTrace } from "../runproof/verify";
+import { verifyTraceServer } from "../runproof/attest";
 import type { RunProofReport } from "../runproof/types";
 
 export const AGENT_GAMES_SIGNATURE_HEADER = "x-agent-games-signature";
@@ -75,7 +75,7 @@ export function createWildcardRunTraceAdapter(mapping: WildcardTaskMapping): Age
     matches: mapping.matchesEnvelope,
     getTaskId: mapping.taskId,
     handle(envelope) {
-      const report: RunProofReport = verifyTrace(mapping.traceInput(envelope));
+      const report: RunProofReport = verifyTraceServer(mapping.traceInput(envelope));
       return {
         task: report.task,
         policy: report.policy,

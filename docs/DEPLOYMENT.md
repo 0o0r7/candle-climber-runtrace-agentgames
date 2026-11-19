@@ -48,9 +48,12 @@ curl -s -X POST "$BASE/api/runproof/verify" \
 # an oversized body must be refused
 curl -s -o /dev/null -w "%{http_code}\n" -X POST "$BASE/api/runproof/verify" \
   -H 'content-type: application/json' --data-binary @<(head -c 2100000 /dev/zero | tr '\0' 'a')
+
+# receipts list answers (store: memory | mongo)
+curl -s "$BASE/api/runproof/runs?limit=5"
 ```
 
-The run console at `/runproof` also exercises the endpoint in the browser: run the six-case suite, then the "altered claim" case, and confirm the second returns `FLAG`.
+The run console at `/runproof` also exercises the endpoints in the browser: finish a run, press "Replay-check" (ACCEPT), "Save receipt" (opens `/runproof/r/{id}`), then "Tamper my run (+1 score)" and confirm it returns `FLAG`.
 
 ## Notes
 

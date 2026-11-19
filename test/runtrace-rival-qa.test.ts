@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Engine } from "@/game/cc/engine";
 import { buildPlatforms } from "@/game/cc/level";
 import { BASE_MODS } from "@/game/cc/mutations";
-import { DEMO_TERRAIN_KIND, makeDemoCandles } from "@/game/runproof/demo-data";
+import { QA_TERRAIN_KIND, makeQaCandles } from "@/game/runproof/qa-terrain";
 import {
   checkRivalQaEngineInvariants,
   createRivalQaFinding,
@@ -26,12 +26,12 @@ describe("RunTrace autonomous RivalBot QA", () => {
     expect(first.cases.every((qaCase) => qaCase.trace.recorder?.id === RIVAL_QA_RECORDER_ID)).toBe(true);
     expect(first.cases.every((qaCase) => qaCase.replay.decision === "ACCEPT")).toBe(true);
     expect(first.cases.every((qaCase) => qaCase.trace.claims.score === qaCase.replay.replay?.score)).toBe(true);
-    expect(first.cases.every((qaCase) => qaCase.trace.terrain.kind === DEMO_TERRAIN_KIND)).toBe(true);
+    expect(first.cases.every((qaCase) => qaCase.trace.terrain.kind === QA_TERRAIN_KIND)).toBe(true);
     expect(JSON.stringify(second)).toBe(JSON.stringify(first));
   });
 
   test("detects non-finite state and monotonic score violations independently of replay", () => {
-    const candles = makeDemoCandles(72);
+    const candles = makeQaCandles(72);
     const seed = "2026-01-16QA-ALPHA";
     const engine = new Engine(buildPlatforms(candles, seed), { onDeath: () => {}, onScore: () => {} }, BASE_MODS, seed);
     const initial = checkRivalQaEngineInvariants(engine, null, 0);

@@ -1,8 +1,8 @@
 # Candle Climber — RunTrace
 
-**Deterministic replay-consistency verification for the Candle Climber game engine, plus an autonomous local QA agent that drives it.**
+**Verified run receipts for the Candle Climber game engine, plus an autonomous QA agent that drives it.**
 
-RunTrace is a verification layer built into this Candle Climber build. It records gameplay input at the fixed 60 Hz simulation boundary (not at browser frame time), replays that input against the same engine, and reports whether the replayed state agrees with the recorded outcome. A deterministic, rule-based QA agent (`RivalBot`) plays the game on its own, so runs can be produced, captured, and replayed without a human in the loop.
+RunTrace records gameplay input at the fixed 60 Hz simulation boundary (not at browser frame time), replays it against the same engine, and turns a matching run into a shareable receipt. Player runs use the day's real market chart: `GET /api/candles` signs the level it served, and the verifier recomputes the candle fingerprint, so a receipt cannot be moved to hand-edited terrain. A deterministic, rule-based QA agent (`RivalBot`) plays the game on its own, so runs can also be produced and checked without a human in the loop.
 
 This build is prepared as a **Wildcard entry for [zkVerify Agent Games](https://agentgames.zkverify.io/events/wildcard)**.
 
@@ -23,25 +23,32 @@ bun run dev          # http://localhost:3000
 | --- | --- |
 | `/` | Landing page |
 | `/play` | The game (Space / ↑ / W to jump, Shift for RUSH) |
-| `/runproof` | RunTrace console: one-click cases and the autonomous QA suite |
+| `/runproof` | RunTrace console: play the day's chart, replay-check it, save a receipt, run the QA suite |
+| `/runproof/r/{id}` | A stored receipt, with a one-click re-verification |
 | `/leaderboard`, `/stats`, `/partners`, `/airdrop`, `/ops` | Game economy and operator surfaces |
-| `POST /api/runproof/verify` | The verification endpoint |
+| `POST /api/runproof/verify` | Verify a trace (checks the run token when present) |
+| `POST /api/runproof/runs` · `GET /api/runproof/runs/{id}` | Issue and read receipts (attested terrain required) |
 
 ## How verification works
 
-1. **Capture.** `FixedTickInputRecorder` stamps each jump / RUSH / world-transition action at the engine's fixed 60 Hz step boundary, together with the terrain the run used.
-2. **Replay.** The verifier rebuilds platforms and daily mutations from the submitted terrain and inputs, then steps the engine forward in a fresh instance.
-3. **Compare.** Replayed score, jumps, landings, scoring events, and final totals are compared against the claims in the trace.
-4. **Decide.** The endpoint returns `ACCEPT` or `FLAG` with a short reason, evidence, and replay diagnostics.
+1. **Capture.** `FixedTickInputRecorder` stamps each jump / RUSH / world-transition action at the engine's fixed 60 Hz step boundary, together with the terrain the run used and the run token the server issued for it.
+2. **Attest.** The server recomputes the terrain fingerprint from the trace's candles and checks it against the token's HMAC. Edited candles, a different symbol/date, or a forged token are flagged; a missing token is reported as unattested terrain.
+3. **Replay.** The verifier rebuilds platforms and daily mutations from the submitted terrain and inputs, then steps the engine forward in a fresh instance.
+4. **Compare.** Replayed score, jumps, landings, scoring events, and final totals are compared against the claims in the trace.
+5. **Decide.** The endpoint returns `ACCEPT` or `FLAG` with a short reason, evidence, and replay diagnostics. A receipt stores that verdict plus the trace.
 
 ```
+market level ──▶ GET /api/candles ──▶ candles + run token
+                                            │
 browser input ──▶ recorder (fixed-tick stamping) ──▶ trace (runproof/v1)
                                                           │
                                         POST /api/runproof/verify
                                                           │
-                                    terrain rebuild + engine replay
+                              terrain attestation + engine replay
                                                           │
                                      ACCEPT / FLAG + evidence
+                                                          │
+                                  POST /api/runproof/runs ──▶ /runproof/r/{id}
 ```
 
 The verifier is deterministic TypeScript. No model, network call, or randomness is involved in the decision.
@@ -59,7 +66,7 @@ Malformed or out-of-bounds requests return an HTTP error rather than a decision.
 
 - Input schema: [`docs/runproof/trace-schema.v1.json`](docs/runproof/trace-schema.v1.json)
 - Result schema: [`docs/runproof/task-contract.v1.json`](docs/runproof/task-contract.v1.json)
-- Prototype notes: [`docs/runproof/README.md`](docs/runproof/README.md)
+- Product notes: [`docs/runproof/README.md`](docs/runproof/README.md)
 
 **Request controls.** The handler prechecks `Content-Length` and enforces a streamed 2,000,000-byte cap, admits at most 2 concurrent requests per process, and limits each client key to 12 requests per rolling 60 seconds (key map capped at 2,048 entries). These controls are process-local and are not a substitute for ingress-level protection on a scaled deployment.
 
@@ -67,7 +74,7 @@ Malformed or out-of-bounds requests return an HTTP error rather than a decision.
 
 `RivalBot` is a deterministic planner: it chooses jump / RUSH actions from the seed, engine state, and one of three existing personality profiles — precise (`wickcop`), greedy (`goldenbull`), patient (`frostliquidator`). It uses no LLM, no network, and no randomness for gameplay decisions.
 
-The `/runproof` suite runs six cases (two synthetic seeds × three profiles, up to 1,800 fixed ticks each). Optional observer hooks capture the bot's actual jump / RUSH / world-transition actions and the engine's own jump, landing, and score events. Those captured traces are then checked by the separate replay path above, and a bounded invariant layer verifies:
+The `/runproof` suite runs six cases (two deterministic QA-fixture seeds × three profiles, up to 1,800 fixed ticks each). Optional observer hooks capture the bot's actual jump / RUSH / world-transition actions and the engine's own jump, landing, and score events. Those captured traces are then checked by the separate replay path above, and a bounded invariant layer verifies:
 
 - finite core engine values
 - legal jump / RUSH / world-transition sequences
@@ -81,9 +88,8 @@ Each finding carries the seed, profile, ruleset, a descriptive local build ID, t
 These constraints are deliberate and stated up front:
 
 - **No cryptographic proof.** There is no zk proof, wallet signature, or zkVerify submission in this build's verification path.
-- **Synthetic terrain.** The demo fixture is fictional and editable. It is not market data.
-- **Unauthenticated provenance.** Traces carry caller-supplied terrain and inputs; who produced them cannot be established by this system.
-- **No identity claim.** A result never identifies or proves that a human played.
+- **Terrain is attested, inputs are not.** Player runs use the day's real market candles and the server-signed run token binds the terrain; the input log itself is caller-supplied and its origin is not authenticated. The QA suite uses a deterministic fixture terrain on purpose.
+- **No identity claim.** A result never identifies or proves that a human played, and no receipt binds a run to a wallet.
 - **Same-engine replay.** The bot run and its replay use the same engine. The invariants are bounded sanity checks, not an independently implemented physics oracle.
 - **Bounded meaning of PASS.** A pass means these traces matched and these listed invariants held for the tested cases — not that all game physics is correct.
 
@@ -96,9 +102,9 @@ src/game/cc/            Game engine, physics, rendering, scoring
 src/game/cc/rival/      Deterministic RivalBot planner
 src/game/runproof/      Recorder, replay verifier, QA agent, HTTP guard
 src/game/agentgames/    Composable adapter factory (signature/preflight/idempotency)
-src/app/runproof/       RunTrace console UI
-src/app/api/runproof/   Verification endpoint
-docs/runproof/          Trace schema, result contract, prototype notes
+src/app/runproof/       RunTrace console and receipt pages
+src/app/api/runproof/   Verification and receipt endpoints
+docs/runproof/          Trace schema, result contract, product notes
 docs/competition/       Agent Games submission material
 ```
 

@@ -2,7 +2,7 @@ import { Engine, PLAYER_H, PLAYER_W } from "../cc/engine";
 import { buildPlatforms } from "../cc/level";
 import { dailyMutation } from "../cc/mutations";
 import { RivalBot, type RivalBotInput, type RivalBotObserver } from "../cc/rival/bot";
-import { DEMO_TERRAIN_KIND, makeDemoCandles } from "./demo-data";
+import { QA_TERRAIN_KIND, makeQaCandles } from "./qa-terrain";
 import { verifyTrace } from "./verify";
 import {
   FIXED_DT,
@@ -212,7 +212,7 @@ function checkRivalInput(engine: Engine, action: RivalBotInput, tick: number): R
 function runCase(seed: typeof SEEDS[number], profile: typeof PROFILES[number]): RivalQaCase {
   const seedValue = { date: seed.date, symbol: seed.symbol };
   const seedStr = seed.date + seed.symbol;
-  const candles = makeDemoCandles(72);
+  const candles = makeQaCandles(72);
   const mutation = dailyMutation(seedStr);
   const inputs: InputEvent[] = [];
   const jumpTicks: number[] = [];
@@ -271,7 +271,6 @@ function runCase(seed: typeof SEEDS[number], profile: typeof PROFILES[number]): 
   const recordedInputs = inputs.filter((event) => event.tick < steps);
   const trace: RunProofTrace = {
     format: TRACE_FORMAT,
-    prototype: true,
     recorder: {
       format: RECORDER_FORMAT,
       id: RIVAL_QA_RECORDER_ID,
@@ -279,7 +278,7 @@ function runCase(seed: typeof SEEDS[number], profile: typeof PROFILES[number]): 
       tickHz: FIXED_TICK_HZ,
     },
     seed: seedValue,
-    terrain: { kind: DEMO_TERRAIN_KIND, candles: candles.map((candle) => ({ ...candle })) },
+    terrain: { kind: QA_TERRAIN_KIND, candles: candles.map((candle) => ({ ...candle })) },
     mutationId: mutation.id,
     ticks: Math.max(1, Math.min(MAX_TICKS, steps)),
     inputs: recordedInputs.map((event) => ({ ...event })),
