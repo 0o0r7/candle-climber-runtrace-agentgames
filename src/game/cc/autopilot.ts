@@ -1,5 +1,5 @@
-// Landing-page demo autopilot — drives a silent Engine for the showcase only
-// (never used in real runs, never posts scores).
+// Autopilot — drives a silent Engine for showcase loops (never used in real
+// scored runs, never posts scores on its own).
 //
 // Why not RivalBot: the engine ungrounds the player the same tick they touch a
 // red candle (a crumbling platform is no longer "solid"), leaving only the
@@ -7,13 +7,16 @@
 // so it never jumps off a red candle. This pilot re-arms on every landing and
 // plans the whole take-off window (walk / coyote) at once.
 //
-// Deterministic: physics depends only on the number of fixed steps, so the
-// run is identical in every browser (and in the headless validation).
-import { Engine, GRAVITY, PLAYER_W, PLAYER_H, CAM_BASE, CAM_ACCEL, CAM_MAX } from "@/game/cc/engine";
-import { buildPlatforms } from "@/game/cc/level";
-import { BASE_MODS } from "@/game/cc/mutations";
-import { evalPressNow, FIXED_DT, type PressEval } from "@/game/cc/rival/planner";
-import type { Candle, Platform } from "@/game/cc/types";
+// Deterministic: physics depends only on the number of fixed steps, so a run
+// is identical in every browser and can be recorded as fixed-tick inputs and
+// replayed by the RunTrace verifier.
+//
+// Used by the landing gameplay demo and the RunTrace showcase.
+import { Engine, GRAVITY, PLAYER_W, PLAYER_H, CAM_BASE, CAM_ACCEL, CAM_MAX } from "./engine";
+import { buildPlatforms } from "./level";
+import { BASE_MODS, type MutationMods } from "./mutations";
+import { evalPressNow, FIXED_DT, type PressEval } from "./rival/planner";
+import type { Candle, Platform } from "./types";
 
 /** Below this landing margin (px) an option counts as "edgy". */
 const SAFE_MARGIN = 10;
@@ -22,15 +25,39 @@ const MAX_WAIT = 300;
 
 interface Plan { wait: number; hold: boolean }
 
-export class DemoPilot {
+/** Every press/release the pilot issues, stamped with the tick it applies to.
+ *  RunTrace records these as fixed-tick inputs. */
+export type AutopilotObserver = (action: "jump-down" | "jump-up", tick: number) => void;
+
+export interface AutopilotOptions {
+  /** Mutation mods for the level (defaults to BASE_MODS). The caller must use
+   *  the same mods when replaying the recorded run. */
+  mods?: MutationMods;
+  /** Pre-built engine with the caller's callbacks (score/sfx/death capture).
+   *  Must be built from the same candles, seed and mods. */
+  engine?: Engine;
+  observer?: AutopilotObserver;
+}
+
+export class Autopilot {
   readonly eng: Engine;
+  private readonly observer?: AutopilotObserver;
   private armed = false;
   private baseIdx = -1;
   private plan: Plan | null = null;
   private cutPending = false;
+  private tickIndex = 0;
 
-  constructor(candles: Candle[], seed: string) {
-    this.eng = new Engine(buildPlatforms(candles, seed), { onDeath: () => {}, onScore: () => {} }, BASE_MODS, seed);
+  constructor(candles: Candle[], seed: string, options: AutopilotOptions = {}) {
+    const mods = options.mods ?? BASE_MODS;
+    this.eng = options.engine
+      ?? new Engine(buildPlatforms(candles, seed), { onDeath: () => {}, onScore: () => {} }, mods, seed);
+    this.observer = options.observer;
+  }
+
+  /** Fixed steps completed so far (the tick that will be stepped next). */
+  get ticks(): number {
+    return this.tickIndex;
   }
 
   tick() {
@@ -38,11 +65,13 @@ export class DemoPilot {
     if (e.dead) return;
     if (this.cutPending) {
       e.release(); // jump-cut one tick after the press (planner's cut variant)
+      this.observer?.("jump-up", this.tickIndex);
       this.cutPending = false;
     } else if (this.armed) {
       if (!this.plan) this.plan = this.makePlan();
       if (this.plan.wait <= 0) {
         e.press();
+        this.observer?.("jump-down", this.tickIndex);
         if (!this.plan.hold) this.cutPending = true;
         this.armed = false;
         this.plan = null;
@@ -51,6 +80,7 @@ export class DemoPilot {
       }
     }
     e.step(FIXED_DT);
+    this.tickIndex += 1;
     // the engine zeroes vy only when the feet touch a platform
     if (e.vy === 0 && !this.armed && !this.cutPending) this.onLanded();
   }

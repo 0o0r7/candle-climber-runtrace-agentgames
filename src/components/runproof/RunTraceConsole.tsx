@@ -440,6 +440,10 @@ export default function RunTraceConsole() {
           shareable receipt that anyone can re-check — the terrain is pinned to the market level the server signed, so a receipt
           cannot be moved to a different chart.
         </p>
+        <p style={{ font: `12px ${MONO}`, margin: "0 0 20px" }}>
+          <a href="/runproof/showcase" style={{ color: "#ccff00" }}>WATCH THE SHOWCASE LOOP ↗</a>
+          <span style={{ color: "#79838a" }}> — an agent plays today&apos;s signed level on a verified replay loop.</span>
+        </p>
 
         <section style={{ background: "#111518", border: "1px solid #283036", borderRadius: 10, overflow: "hidden" }}>
           <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "space-between", padding: "12px 16px" }}>

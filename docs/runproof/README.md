@@ -14,6 +14,19 @@ The console plays the same daily market level as the game. `GET /api/candles` se
 
 So a receipt cannot be moved to hand-edited terrain: the candles in the trace must be exactly the level the server served.
 
+## Showcase loop (`/runproof/showcase`)
+
+`/runproof/showcase` runs the same pipeline unattended and loops it:
+
+1. Fetch today's signed terrain from `/api/candles`.
+2. Let the deterministic `Autopilot` (`src/game/cc/autopilot.ts`) play it while its real jump/release inputs are stamped at 60 Hz.
+3. Replay the finished trace on the server (`POST /api/runproof/verify`) and show the `ACCEPT` evidence.
+4. Verify a copy with one extra claimed point and show the expected `FLAG` (`score_mismatch`).
+5. Store the receipt — reusing today's identical run when one already exists — then re-read it from the store and replay it again to show a `MATCH`.
+6. Loop the recorded trace through the real engine. The loop is a deterministic replay, not a video file.
+
+The page prints the "not claimed" boundary next to the evidence: no zero-knowledge proof, no zkVerify submission, no wallet identity. The autopilot is deterministic, so every visitor records the same run for the same signed terrain, and the loop is the replay of that run.
+
 ## Endpoints
 
 | Route | Purpose |

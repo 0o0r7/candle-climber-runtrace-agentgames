@@ -17,7 +17,7 @@ This build is prepared for the [zkVerify Agent Games](https://agentgames.zkverif
 
 | Requirement | Where it is satisfied |
 | --- | --- |
-| Agent link — public repository, demo, or write-up | This repository plus the deployed demo route `/runproof` |
+| Agent link — public repository, demo, or write-up | This repository plus the deployed demo routes `/runproof` (console) and `/runproof/showcase` (looped, verified replay) |
 | Public HTTPS endpoint for the agent | `POST /api/runproof/verify` and the receipt routes `POST/GET /api/runproof/runs` on the deployment |
 | Use case — problem, users, behaviour | [wildcard-entry.md](wildcard-entry.md) |
 | Build context — how it works, key decisions | [wildcard-entry.md](wildcard-entry.md) and [../runproof/README.md](../runproof/README.md) |

@@ -70,6 +70,7 @@ The natural next step is to make the claim checkable by a third party rather tha
 ## Links
 
 - Demo and console: `PUBLIC_URL/runproof`
+- Showcase loop (agent plays, server verifies, replay loops): `PUBLIC_URL/runproof/showcase`
 - Game: `PUBLIC_URL/play`
 - Repository: this repository
 - Verification notes: [../runproof/README.md](../runproof/README.md)
