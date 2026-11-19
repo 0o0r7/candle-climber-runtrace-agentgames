@@ -4,6 +4,7 @@ import { headers } from "next/headers"; // G5: nonce read — opts routes into d
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import PrivyAuthGate from "@/components/cc/PrivyAuthGate";
+import { PUBLIC_ORIGIN } from "@/lib/public-origin";
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono-cc",
@@ -11,13 +12,12 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "700"],
 });
 
-// Canonical site URL — set NEXT_PUBLIC_SITE_URL on Vercel to the real domain;
-// this default matches the standard Vercel project URL for this repo.
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://candle-climber.vercel.app";
+// Canonical site URL — this build's own deployment (see src/lib/public-origin.ts).
+const siteUrl = PUBLIC_ORIGIN;
 
-const title = "CANDLE CLIMBER — The chart is the level";
+const title = "CANDLE CLIMBER — RunTrace";
 const description =
-  "A skill platformer where the terrain is real candlestick data. Green candles hold, red candles crumble. One daily chart, every player worldwide. Built for the vibe/vibe ecosystem on Robinhood Chain.";
+  "A skill platformer whose terrain is real candlestick data, plus RunTrace: fixed-tick run recording, deterministic server replay, and shareable verified receipts. Prepared as a Wildcard entry for zkVerify Agent Games.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -25,9 +25,10 @@ export const metadata: Metadata = {
   description,
   keywords: [
     "candle climber",
-    "vibe vibe",
-    "robinhood chain",
-    "web3 game",
+    "runtrace",
+    "agent games",
+    "deterministic replay",
+    "game qa agent",
     "trading game",
     "daily challenge",
   ],
@@ -38,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "/",
-    siteName: "CANDLE CLIMBER",
+    siteName: "CANDLE CLIMBER — RUNTRACE",
     title,
     description,
     images: [{ url: "/og.png", width: 1200, height: 630, alt: "CANDLE CLIMBER — the chart is the level" }],

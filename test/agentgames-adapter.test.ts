@@ -8,7 +8,7 @@ import {
   createWildcardRunTraceAdapter,
   encodeDisplayedSecretAsUtf8KeyForCompetitorEvidenceProfile,
 } from "@/game/agentgames/adapter";
-import { DEMO_SEED, DEMO_TERRAIN_KIND, makeDemoCandles } from "@/game/runproof/demo-data";
+import { QA_SEED, QA_TERRAIN_KIND, makeQaCandles } from "@/game/runproof/qa-terrain";
 import { RunProofRequestGuard } from "@/game/runproof/http-guard";
 import { deriveClaims } from "@/game/runproof/verify";
 import type { RunProofTrace } from "@/game/runproof/types";
@@ -33,12 +33,11 @@ function localTestProvider(): { secret: Uint8Array; provider: AgentGamesSignatur
 }
 
 function traceFixture(): RunProofTrace {
-  const seed = { ...DEMO_SEED };
+  const seed = { ...QA_SEED };
   const traceBase = {
     format: "runproof/v1" as const,
-    prototype: true as const,
     seed,
-    terrain: { kind: DEMO_TERRAIN_KIND, candles: makeDemoCandles() },
+    terrain: { kind: QA_TERRAIN_KIND, candles: makeQaCandles() },
     mutationId: dailyMutation(seed.date + seed.symbol).id,
     ticks: 10,
     inputs: [],

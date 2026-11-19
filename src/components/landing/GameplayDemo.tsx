@@ -7,8 +7,8 @@ import { renderV2 } from "@/game/cc/render-v2";
 import { biomeById } from "@/game/cc/biome";
 import { DEFAULT_CHAR_ID } from "@/game/cc/characters";
 import { FIXED_DT } from "@/game/cc/rival/planner";
+import { Autopilot } from "@/game/cc/autopilot";
 import { DEMO_SEED, demoCandles, zoneAt } from "./demo-chart";
-import { DemoPilot } from "./demo-pilot";
 import { ZoneBlender, type ZoneEnv } from "./demo-weather";
 
 // Skip most of the flat launch pad, then show one ~30s loop that crosses all
@@ -43,7 +43,7 @@ export default function GameplayDemo() {
     if (!ctx) return;
 
     const candles = demoCandles();
-    let pilot: DemoPilot;
+    let pilot: Autopilot;
     let blender: ZoneBlender;
     let env: ZoneEnv;
     let loopT = 0;
@@ -52,7 +52,7 @@ export default function GameplayDemo() {
     const zoneNow = () => zoneAt(Math.floor((pilot.eng.px + PLAYER_W / 2) / CANDLE_W));
 
     const restart = () => {
-      pilot = new DemoPilot(candles, DEMO_SEED);
+      pilot = new Autopilot(candles, DEMO_SEED);
       for (let i = 0; i < Math.round(PREROLL_S / FIXED_DT); i++) pilot.tick();
       blender = new ZoneBlender(zoneNow());
       env = blender.step(zoneNow(), 0);

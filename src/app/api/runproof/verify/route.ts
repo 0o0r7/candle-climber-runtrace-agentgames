@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyTrace } from "@/game/runproof/verify";
+import { verifyTraceServer } from "@/game/runproof/attest";
 import { clientIp } from "@/lib/http-limiter";
 import {
   readCappedJsonBody,
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "request body must be valid JSON" }, { status: 400 });
     }
 
-    const report = verifyTrace(trace);
+    const report = verifyTraceServer(trace);
     return NextResponse.json(report, {
       status: 200,
       headers: { "Cache-Control": "no-store" },

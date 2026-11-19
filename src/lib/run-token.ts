@@ -50,10 +50,17 @@ export function getRunTokenSecret(): string | null {
   return "cc-local-dev-secret"; // local dev / preview convenience only
 }
 
+/** The short terrain fingerprint a run token commits to (first 16 hex chars of
+ *  sha256 over the exact candle JSON). Exported so a verifier can recompute it
+ *  from the candles carried by a trace. */
+export function candleTerrainFingerprint(candleJson: string): string {
+  return createHash("sha256").update(candleJson).digest("hex").slice(0, 16);
+}
+
 export function signRunToken(symbol: string, date: string, count: number, candleJson: string, interval: GameInterval = "1w"): string {
   const secret = getRunTokenSecret();
   if (!secret) return ""; // prod without secret: no token — terrain serves unscored
-  const h = createHash("sha256").update(candleJson).digest("hex").slice(0, 16);
+  const h = candleTerrainFingerprint(candleJson);
   const payload = Buffer.from(JSON.stringify({ symbol, date, count, h, interval })).toString("base64url");
   const sig = createHmac("sha256", secret).update(payload).digest("base64url");
   return `${payload}.${sig}`;

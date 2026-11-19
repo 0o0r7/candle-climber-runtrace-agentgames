@@ -75,8 +75,8 @@
 - **Failure mode**: non-OK HTTP, JSON without a usable `chart.result[0]`
   (rate-limit/error shapes), <40 closed rows, or network error → **stooq
   fallback** → still failing → **synthetic tokenless fallback** (unscored).
-- **Source label**: `yahoo` → "live data" (real OHLC); timeframe chips hidden
-  (stocks are weekly-only rails).
+- **Source label**: `yahoo` → "live data" (real OHLC); the whole game is
+  weekly-only (no timeframe chips).
 
 ## 3. Stooq weekly CSV — stock rails, FALLBACK (W3)
 

@@ -1,0 +1,417 @@
+{
+  "suite": "agent-games-scenarios/v1",
+  "generatedAt": "2026-11-19T12:52:50.813Z",
+  "baseUrl": "https://candle-climber-runtrace.vercel.app",
+  "protocol": {
+    "task": "runproof.verify.v1",
+    "signatureProfile": "hmac-sha256/raw-body/utf8-key/lowercase-hex (local implemented choice, not a confirmed platform contract)",
+    "signingKeyConfigured": true
+  },
+  "summary": {
+    "total": 22,
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0,
+    "rateLimitWaits": 0
+  },
+  "facts": {
+    "terrain": {
+      "seed": {
+        "date": "2026-11-19",
+        "symbol": "XRPUSDT",
+        "interval": "1w",
+        "source": "binance"
+      },
+      "candles": 219,
+      "runTokenPrefix": "eyJzeW1ib2wi",
+      "candlesHash": "6fdc298e3eec20b5953fac6620a7dd3ca5083903c94c6c51724db3848dd7f521"
+    },
+    "agentRun": {
+      "profile": "wickcop",
+      "died": true,
+      "ticks": 216,
+      "inputs": 2,
+      "claims": {
+        "score": 105,
+        "candlesPassed": 7,
+        "bestStreak": 3,
+        "deathCause": "crumbled",
+        "jumpTicks": [
+          20,
+          105
+        ],
+        "landTicks": [
+          18,
+          99,
+          182
+        ],
+        "scoreEvents": [
+          {
+            "tick": 19,
+            "score": 15,
+            "combo": 1,
+            "candlesPassed": 1
+          },
+          {
+            "tick": 51,
+            "score": 35,
+            "combo": 2,
+            "candlesPassed": 2
+          },
+          {
+            "tick": 82,
+            "score": 60,
+            "combo": 3,
+            "candlesPassed": 3
+          },
+          {
+            "tick": 113,
+            "score": 70,
+            "combo": 0,
+            "candlesPassed": 4
+          },
+          {
+            "tick": 144,
+            "score": 85,
+            "combo": 1,
+            "candlesPassed": 5
+          },
+          {
+            "tick": 174,
+            "score": 95,
+            "combo": 0,
+            "candlesPassed": 6
+          },
+          {
+            "tick": 197,
+            "score": 105,
+            "combo": 0,
+            "candlesPassed": 7
+          }
+        ]
+      },
+      "traceHash": "e60f254b7529faf72fa95ce5fc78a659a225a5f0e9ea4aaf3cddb70b4b4a66d5"
+    },
+    "receipt": {
+      "id": "ea11041e-611a-4a0a-be81-d2d0fc5d2ae3",
+      "url": "https://candle-climber-runtrace.vercel.app/runproof/r/ea11041e-611a-4a0a-be81-d2d0fc5d2ae3",
+      "decision": "ACCEPT"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "deployment.home",
+      "title": "Home route serves the app",
+      "status": "PASS",
+      "latencyMs": 433,
+      "detail": {
+        "status": 200,
+        "bytes": 71181
+      }
+    },
+    {
+      "id": "deployment.showcase",
+      "title": "Showcase route serves the loop",
+      "status": "PASS",
+      "latencyMs": 195,
+      "detail": {
+        "status": 200,
+        "bytes": 32108
+      }
+    },
+    {
+      "id": "terrain.attested",
+      "title": "Daily level carries a server-signed run token",
+      "status": "PASS",
+      "latencyMs": 1,
+      "detail": {
+        "seed": {
+          "date": "2026-11-19",
+          "symbol": "XRPUSDT",
+          "interval": "1w",
+          "source": "binance"
+        },
+        "candles": 219,
+        "runTokenPrefix": "eyJzeW1ib2wi",
+        "candlesHash": "6fdc298e3eec20b5953fac6620a7dd3ca5083903c94c6c51724db3848dd7f521"
+      }
+    },
+    {
+      "id": "agent.run",
+      "title": "Automated player completes a run",
+      "status": "PASS",
+      "latencyMs": 9,
+      "detail": {
+        "ticks": 216,
+        "inputs": 2,
+        "score": 105,
+        "candlesPassed": 7,
+        "deathCause": "crumbled"
+      }
+    },
+    {
+      "id": "verify.accept",
+      "title": "Verifier accepts the run",
+      "status": "PASS",
+      "latencyMs": 196,
+      "detail": {
+        "decision": "ACCEPT",
+        "policy": "runproof/deterministic-replay/v1",
+        "replay": {
+          "ticks": 216,
+          "score": 105,
+          "candlesPassed": 7,
+          "bestStreak": 3,
+          "deathCause": "crumbled",
+          "jumpTicks": [
+            20,
+            105
+          ],
+          "landTicks": [
+            18,
+            99,
+            182
+          ],
+          "scoreEvents": [
+            {
+              "tick": 19,
+              "score": 15,
+              "combo": 1,
+              "candlesPassed": 1
+            },
+            {
+              "tick": 51,
+              "score": 35,
+              "combo": 2,
+              "candlesPassed": 2
+            },
+            {
+              "tick": 82,
+              "score": 60,
+              "combo": 3,
+              "candlesPassed": 3
+            },
+            {
+              "tick": 113,
+              "score": 70,
+              "combo": 0,
+              "candlesPassed": 4
+            },
+            {
+              "tick": 144,
+              "score": 85,
+              "combo": 1,
+              "candlesPassed": 5
+            },
+            {
+              "tick": 174,
+              "score": 95,
+              "combo": 0,
+              "candlesPassed": 6
+            },
+            {
+              "tick": 197,
+              "score": 105,
+              "combo": 0,
+              "candlesPassed": 7
+            }
+          ]
+        },
+        "evidence": [
+          "Replay completed: 216 fixed ticks at 60 Hz.",
+          "Claims match replay: score 105, 7 candles passed, best streak 3.",
+          "Checked 2 input events against 219 supplied terrain candles.",
+          "Terrain matches the server-signed market level: XRPUSDT 2026-11-19 · 219 closed 1w candles."
+        ]
+      }
+    },
+    {
+      "id": "verify.tamper",
+      "title": "Verifier flags a tampered run",
+      "status": "PASS",
+      "latencyMs": 263,
+      "detail": {
+        "decision": "FLAG",
+        "reason": "Policy flagged the trace: Claimed score 106 does not match replayed score 105."
+      }
+    },
+    {
+      "id": "receipt.issue",
+      "title": "Receipt is issued for the attested run",
+      "status": "PASS",
+      "latencyMs": 1370,
+      "detail": {
+        "id": "ea11041e-611a-4a0a-be81-d2d0fc5d2ae3",
+        "url": "https://candle-climber-runtrace.vercel.app/runproof/r/ea11041e-611a-4a0a-be81-d2d0fc5d2ae3",
+        "decision": "ACCEPT"
+      }
+    },
+    {
+      "id": "receipt.read",
+      "title": "Stored receipt re-verifies",
+      "status": "PASS",
+      "latencyMs": 472,
+      "detail": {
+        "id": "ea11041e-611a-4a0a-be81-d2d0fc5d2ae3",
+        "decision": "ACCEPT",
+        "terrainAttested": true,
+        "traceHash": "e60f254b7529faf72fa95ce5fc78a659a225a5f0e9ea4aaf3cddb70b4b4a66d5",
+        "reverified": "ACCEPT"
+      }
+    },
+    {
+      "id": "receipt.unattested",
+      "title": "Receipt endpoint refuses unattested terrain",
+      "status": "PASS",
+      "latencyMs": 207,
+      "detail": {
+        "status": 422
+      }
+    },
+    {
+      "id": "protocol.preflight",
+      "title": "Signed preflight handshake",
+      "status": "PASS",
+      "latencyMs": 150,
+      "detail": {
+        "status": 200,
+        "body": {
+          "ok": true,
+          "protocolVersion": "v1"
+        },
+        "responseSigned": true
+      }
+    },
+    {
+      "id": "protocol.task",
+      "title": "Signed verification task",
+      "status": "PASS",
+      "latencyMs": 158,
+      "detail": {
+        "status": 200,
+        "decision": "ACCEPT",
+        "responseSigned": true
+      }
+    },
+    {
+      "id": "protocol.bad-signature",
+      "title": "Unsigned task is rejected",
+      "status": "PASS",
+      "latencyMs": 179,
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "id": "protocol.idempotency",
+      "title": "Repeated task returns the same signed answer",
+      "status": "PASS",
+      "latencyMs": 509,
+      "detail": {
+        "identicalBody": true,
+        "identicalSignature": true
+      }
+    },
+    {
+      "id": "protocol.conflict",
+      "title": "Reused task ID with a new body is refused",
+      "status": "PASS",
+      "latencyMs": 302,
+      "detail": {
+        "status": 409
+      }
+    },
+    {
+      "id": "verify.honest-loss",
+      "title": "A lost run is ACCEPT, not FLAG",
+      "status": "PASS",
+      "latencyMs": 228,
+      "detail": {
+        "decision": "ACCEPT",
+        "score": 105,
+        "deathCause": "crumbled",
+        "ticks": 209
+      }
+    },
+    {
+      "id": "verify.loss-inflated",
+      "title": "A lost run claiming points is flagged",
+      "status": "PASS",
+      "latencyMs": 217,
+      "detail": {
+        "decision": "FLAG",
+        "codes": [
+          "score_mismatch"
+        ]
+      }
+    },
+    {
+      "id": "verify.after-death",
+      "title": "A trace that keeps going after death is flagged",
+      "status": "PASS",
+      "latencyMs": 220,
+      "detail": {
+        "decision": "FLAG",
+        "codes": [
+          "ticks_after_death"
+        ]
+      }
+    },
+    {
+      "id": "verify.terrain-tamper",
+      "title": "Hand-edited candles break the signed terrain",
+      "status": "PASS",
+      "latencyMs": 207,
+      "detail": {
+        "decision": "FLAG",
+        "codes": [
+          "run_token_terrain_mismatch"
+        ]
+      }
+    },
+    {
+      "id": "verify.mutation-swap",
+      "title": "A wrong daily mutation is flagged",
+      "status": "PASS",
+      "latencyMs": 166,
+      "detail": {
+        "claimed": "clean",
+        "expected": "rush",
+        "codes": [
+          "mutation_mismatch"
+        ]
+      }
+    },
+    {
+      "id": "verify.foreign-token",
+      "title": "A run token for another symbol is refused",
+      "status": "PASS",
+      "latencyMs": 1234,
+      "detail": {
+        "borrowedFrom": "BTCUSDT",
+        "decision": "FLAG",
+        "codes": [
+          "run_token_seed_mismatch"
+        ]
+      }
+    },
+    {
+      "id": "verify.oversized",
+      "title": "An oversized body is refused before replay",
+      "status": "PASS",
+      "latencyMs": 952,
+      "detail": {
+        "status": 413
+      }
+    },
+    {
+      "id": "receipt.invalid-json",
+      "title": "Malformed JSON is a 400, not a crash",
+      "status": "PASS",
+      "latencyMs": 148,
+      "detail": {
+        "status": 400
+      }
+    }
+  ]
+}

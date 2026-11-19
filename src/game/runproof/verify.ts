@@ -25,9 +25,16 @@ const TASK = "verify-run-trace" as const;
 const POLICY = "runproof/deterministic-replay/v1" as const;
 const LIMITS = [
   "The ACCEPT/FLAG decision is produced by deterministic TypeScript validation and engine replay; it is not an LLM or probabilistic model.",
-  "The trace carries its own candle data and input events; synthetic demo terrain provenance is not authenticated and the result never establishes human identity.",
-  "No cryptographic proof, zk proof, zkVerify submission, wallet signature, leaderboard enforcement, or production acceptance is created.",
+  "A trace may carry a server-issued run token that binds its terrain to the market level it was served for; input origin and player identity remain unauthenticated.",
+  "No zero-knowledge proof, wallet signature, leaderboard enforcement, or third-party attestation is created.",
 ];
+
+/** Optional server-side terrain check. `verified` adds evidence, `invalid`
+ *  adds a FLAG issue. Supplied only where node:crypto is available, so the
+ *  replay core stays usable in the browser. */
+export type TerrainAttestation =
+  | { kind: "verified"; evidence: string }
+  | { kind: "invalid"; issue: RunProofIssue };
 const ALLOWED_ACTIONS = new Set<InputAction>([
   "jump-down",
   "jump-up",
@@ -201,12 +208,15 @@ function validateTrace(raw: unknown): { trace?: RunProofTrace; issues: RunProofI
     return { issues: [{ code: "invalid_shape", message: "Trace must be a JSON object." }] };
   }
 
-  if (!hasOnlyKeys(raw, ["format", "prototype", "recorder", "seed", "terrain", "mutationId", "ticks", "inputs", "claims"])) {
+  if (!hasOnlyKeys(raw, ["format", "recorder", "seed", "terrain", "runToken", "mutationId", "ticks", "inputs", "claims"])) {
     issues.push({ code: "invalid_shape", message: "Trace contains properties not defined by the runproof/v1 schema." });
   }
 
-  if (raw.format !== TRACE_FORMAT || raw.prototype !== true) {
-    issues.push({ code: "format_mismatch", message: `Expected ${TRACE_FORMAT} with prototype=true.` });
+  if (raw.format !== TRACE_FORMAT) {
+    issues.push({ code: "format_mismatch", message: `Expected ${TRACE_FORMAT}.` });
+  }
+  if (raw.runToken !== undefined && (typeof raw.runToken !== "string" || raw.runToken.length < 1 || raw.runToken.length > 4096)) {
+    issues.push({ code: "invalid_run_token", message: "runToken must be a bounded string when present." });
   }
   if (!isRecord(raw.seed) || !hasOnlyKeys(raw.seed, ["date", "symbol"]) || !isDateString(raw.seed.date)
       || typeof raw.seed.symbol !== "string" || !/^[A-Za-z0-9._-]{1,24}$/.test(raw.seed.symbol)) {
@@ -273,7 +283,10 @@ function issueEvidence(issue: RunProofIssue): string {
   return `${issue.code}: ${shortText(issue.message)}`;
 }
 
-export function verifyTrace(raw: unknown): RunProofReport {
+export function verifyTrace(
+  raw: unknown,
+  attestation?: (trace: RunProofTrace) => TerrainAttestation | null,
+): RunProofReport {
   const shape = validateTrace(raw);
   if (!shape.trace) {
     const firstIssue = shape.issues[0];
@@ -294,6 +307,16 @@ export function verifyTrace(raw: unknown): RunProofReport {
   const expectedMutation = dailyMutation(trace.seed.date + trace.seed.symbol).id;
   if (trace.mutationId !== expectedMutation) {
     shape.issues.push({ code: "mutation_mismatch", message: `Trace claims mutation ${trace.mutationId}; this seed selects ${expectedMutation}.` });
+  }
+
+  let attest: TerrainAttestation | null = null;
+  if (attestation) {
+    try {
+      attest = attestation(trace);
+    } catch {
+      attest = { kind: "invalid", issue: { code: "attestation_failed", message: "Terrain attestation could not be evaluated." } };
+    }
+    if (attest?.kind === "invalid") shape.issues.push(attest.issue);
   }
 
   const actual = simulate(trace);
@@ -327,11 +350,15 @@ export function verifyTrace(raw: unknown): RunProofReport {
     scoreEvents: actual.scoreEvents,
   };
   const accepted = shape.issues.length === 0;
+  const attestEvidence = attest?.kind === "verified"
+    ? attest.evidence
+    : "No run token attached: terrain provenance is unauthenticated.";
   const evidence = accepted
     ? [
       `Replay completed: ${actual.actualTicks} fixed ticks at ${FIXED_TICK_HZ} Hz.`,
       `Claims match replay: score ${actual.score}, ${actual.candlesPassed} candles passed, best streak ${actual.bestStreak}.`,
       `Checked ${trace.inputs.length} input events against ${trace.terrain.candles.length} supplied terrain candles.`,
+      attestEvidence,
     ]
     : [
       `Replay completed: ${actual.actualTicks} fixed ticks at ${FIXED_TICK_HZ} Hz; claimed score ${trace.claims.score}, replayed score ${actual.score}.`,

@@ -40,6 +40,9 @@ import type { ProofRejectReason } from "@/lib/wallet-proof";
 import { recordClassicRun } from "@/lib/weights-store";
 import { normalizeWallet } from "@/lib/weights";
 import { shortAddress } from "@/lib/wallet";
+// nameless guest rows display a deterministic generated handle (never a rewrite
+// of a typed name) — see src/lib/callsign.ts
+import { displayName } from "@/lib/callsign";
 import { currentSeason, SEASONS, SEASON_1_START } from "@/lib/seasons";
 import { weightsFrozen } from "@/lib/graduation"; // E6.1: snapshot freeze etiquette
 // LU-9: warn loudly when production runs without a database
@@ -60,9 +63,15 @@ function boardParam(raw: string | null): BoardFilter {
   return BOARDS.includes(raw as BoardFilter) ? (raw as BoardFilter) : "guest";
 }
 
-/** Public read paths never expose the full address (airdrop-board convention). */
+/** Public read paths never expose the full address (airdrop-board convention).
+ *  The same presentational pass gives a nameless row (ANON/empty/fixture name)
+ *  a deterministic generated handle — a typed name is never rewritten. */
 function maskWallets(entries: BoardEntry[]): BoardEntry[] {
-  return entries.map((e) => (e.wallet ? { ...e, wallet: shortAddress(e.wallet) } : e));
+  return entries.map((e) => ({
+    ...e,
+    name: displayName(e),
+    ...(e.wallet ? { wallet: shortAddress(e.wallet) } : {}),
+  }));
 }
 
 /* Audit fix: guest-lane identity-flood guard. The run token is deterministic

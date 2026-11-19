@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { dailyMutation } from "@/game/cc/mutations";
-import { DEMO_SEED, DEMO_TERRAIN_KIND, makeDemoCandles } from "@/game/runproof/demo-data";
+import { QA_SEED, QA_TERRAIN_KIND, makeQaCandles } from "@/game/runproof/qa-terrain";
 import { readCappedJsonBody, RunProofRequestGuard } from "@/game/runproof/http-guard";
 import { FixedTickInputRecorder } from "@/game/runproof/recorder";
 import { deriveClaims, verifyTrace } from "@/game/runproof/verify";
@@ -13,13 +13,12 @@ import {
 } from "@/game/runproof/types";
 
 function traceFor(inputs: InputEvent[] = [], ticks = 10): RunProofTrace {
-  const seed = { ...DEMO_SEED };
+  const seed = { ...QA_SEED };
   const traceBase = {
     format: "runproof/v1" as const,
-    prototype: true as const,
     recorder: { format: RECORDER_FORMAT, id: RECORDER_ID, version: 1 as const, tickHz: 60 as const },
     seed,
-    terrain: { kind: DEMO_TERRAIN_KIND, candles: makeDemoCandles() },
+    terrain: { kind: QA_TERRAIN_KIND, candles: makeQaCandles() },
     mutationId: dailyMutation(seed.date + seed.symbol).id,
     ticks,
     inputs,
@@ -75,7 +74,7 @@ describe("RunProof replay verifier", () => {
     expect(report.evidence.length).toBeGreaterThan(0);
     expect(report.replay?.ticks).toBe(120);
     expect(report.replay?.jumpTicks).toEqual([19, 67]);
-    expect(report.limits.some((limit) => limit.includes("terrain provenance is not authenticated"))).toBe(true);
+    expect(report.limits.some((limit) => limit.includes("player identity remain unauthenticated"))).toBe(true);
   });
 
   test("rejects a fabricated impossible jump claim", () => {

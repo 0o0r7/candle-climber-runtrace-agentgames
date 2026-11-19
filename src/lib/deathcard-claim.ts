@@ -13,6 +13,7 @@
 // - testnet-only framing: zero monetary value, the point is proving the loop.
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { bytesToHex } from "@/lib/eth-tx";
+import { PUBLIC_ORIGIN } from "@/lib/public-origin";
 import type { RunTokenPayload } from "@/lib/run-token";
 
 /** One wallet can mint at most this many DISTINCT-run cards per UTC day.
@@ -26,14 +27,16 @@ export const MINT_POLL_MS = 24_000;
 /** The public art every death card points to — a 1024x1024 square crop of the
  *  project's OWN shipped "liquidation chase" landing illustration (the finalized
  *  mascots with their full background; regenerate via
- *  scripts/deathcard/make-card-art.py). Pinned as a constant, NOT env-derived,
- *  so every mint bakes the exact same stable URL into on-chain metadata.
+ *  scripts/deathcard/make-card-art.py). Resolved once at build time from this
+ *  build's own deployment origin, so every mint on THIS deployment bakes the
+ *  exact same stable URL into on-chain metadata and never points at the other
+ *  ecosystem's site (see src/lib/public-origin.ts).
  *  Owner request 2026-10-15: minted cards showed no image; this fixes new mints
  *  WITHOUT any contract change (metadata is minter-supplied, contract stores it
  *  verbatim). Cards minted BEFORE this change keep their image-less metadata —
  *  tokenURIData is immutable on-chain; that is recorded honestly in
  *  docs/DEATHCARD-NFT-TESTNET-NOTE.md. */
-export const DEATH_CARD_IMAGE_URL = "https://candle-climber.vercel.app/nft/death-card.png";
+export const DEATH_CARD_IMAGE_URL = `${PUBLIC_ORIGIN}/nft/death-card.png`;
 
 /** Deterministic ERC-721 run key — keccak256 over the canonical fact line.
  *  Same facts + same wallet ⇒ same key ⇒ on-chain mint-once; any changed

@@ -13,8 +13,9 @@
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { PUBLIC_ORIGIN } from "../src/lib/public-origin";
 
-const GAME_URL = process.env.GAME_URL || "https://candle-climber.vercel.app/play?renderer=v2";
+const GAME_URL = process.env.GAME_URL || `${PUBLIC_ORIGIN}/play?renderer=v2`;
 const RUN_SECONDS = Number(process.env.RUN_SECONDS || 24);
 // NO_RUSH=1 → clean baseline (owner-feedback F1/F2 metric): no risk bursts,
 // measures honest time-to-first-death on today's terrain.

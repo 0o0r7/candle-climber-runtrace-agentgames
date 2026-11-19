@@ -17,6 +17,9 @@ import {
   WALLET_IDENTITY_LIMIT,
 } from "@/lib/weights";
 import { MemoryWeightsStore, recordClassicRun } from "@/lib/weights-store";
+import { pinMemoryStores } from "./helpers/memory-store-env";
+
+pinMemoryStores();
 
 describe("weights · streak chain math", () => {
   test("first-ever run starts the chain at 1", () => {

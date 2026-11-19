@@ -1,32 +1,51 @@
 import Link from "next/link";
 
+/**
+ * Closing band + footer. This build has its own identity: no token strip, no
+ * partner rails, no cross-links to the other deployment (PRODUCT-IDENTITY.md).
+ */
 export default function Footer() {
   return (
     <>
-      <section className="lp-cta">
-        <h2 className="lp-cta-title">
-          READY TO <span className="lime">CLIMB?</span>
+      <section className="rl-final">
+        <p className="rl-sec-kicker">START HERE</p>
+        <h2 className="rl-final-title">
+          Climb today&apos;s chart.
+          <br />
+          Leave with a <em>receipt.</em>
         </h2>
-        <p className="lp-cta-sub">Today&apos;s chart is waiting. How high can you go?</p>
-        <div className="lp-cta-btn">
-          <Link href="/play" className="lp-btn-primary">PLAY NOW</Link>
+        <div className="rl-cta rl-cta--center">
+          <Link href="/play" className="rl-btn rl-btn--primary">
+            ENTER THE GAME
+          </Link>
+          <Link href="/runproof" className="rl-btn rl-btn--ghost">
+            OPEN THE CONSOLE
+          </Link>
         </div>
       </section>
-      <footer className="lp-footer">
-        <div className="lp-footer-links">
-          <Link href="/play" className="lp-footer-link">PLAY</Link>
-          <a href="#how-to-play" className="lp-footer-link">HOW TO PLAY</a>
-          <a href="#features" className="lp-footer-link">FEATURES</a>
-          <Link href="/partners" className="lp-footer-link">PARTNERS</Link>
-          <Link href="/airdrop" className="lp-footer-link">AIRDROP</Link>
-          <Link href="/privacy" className="lp-footer-link">PRIVACY</Link>
-          <Link href="/terms" className="lp-footer-link">TERMS</Link>
+
+      <footer className="rl-footer">
+        <div className="rl-footer-brand">
+          <img src="/brand/wick-climb.webp" alt="" width={34} height={34} loading="lazy" />
+          <div>
+            <p className="rl-footer-word">RUNTRACE</p>
+            <p className="rl-footer-tag">CANDLE CLIMBER · AGENT GAMES ENTRY</p>
+          </div>
         </div>
-        <p className="lp-footer-copy">
-          CANDLE CLIMBER · BUILT FOR THE VIBE/VIBE ECOSYSTEM ON ROBINHOOD CHAIN
-          <br />
-          $WICK is live on Robinhood Chain <b>TESTNET</b> — no real funds, nothing for sale, no
-          returns promised. Launch 2026-10-05 · 0xE2cE0Be4e3D420C1e4b5C46493b3d5e03595216c
+
+        <nav className="rl-footer-links" aria-label="Footer">
+          <Link href="/play">PLAY</Link>
+          <Link href="/runproof">CONSOLE</Link>
+          <Link href="/runproof/showcase">SHOWCASE</Link>
+          <Link href="/leaderboard">LEADERBOARD</Link>
+          <Link href="/privacy">PRIVACY</Link>
+          <Link href="/terms">TERMS</Link>
+        </nav>
+
+        <p className="rl-footer-note">
+          Built on the Candle Climber engine. This build claims deterministic replay and
+          server-side verification — not a zero-knowledge proof, and not proof of human
+          play.
         </p>
       </footer>
     </>

@@ -12,7 +12,11 @@
 //     which URLSearchParams reads as ONE malformed duel param — both lost).
 //   · shareUrl()  is the STANDALONE link (bare GAME_URL has no query yet).
 
-export const GAME_URL = "https://candle-climber.vercel.app";
+import { PUBLIC_ORIGIN } from "../../lib/public-origin";
+
+// Share links stay on THIS build's own origin (see src/lib/public-origin.ts);
+// the other ecosystem's deployment is a separate product.
+export const GAME_URL = PUBLIC_ORIGIN;
 
 /** Sanitize a sharer name into the ref slug (mirrors the landing-side
  *  validation regex /^[A-Za-z0-9_-]{1,24}$/ in GameCanvas). */
