@@ -38,12 +38,18 @@ const MAX_TAKE_TICKS = 60 * FIXED_TICK_HZ;
 /** Pause on the death frame before the loop restarts, then fade back in. */
 const REPLAY_HOLD_S = 1.3;
 const FADE_S = 0.4;
+/** Style dial per take, cycled. 0 is the most centered play; higher values let
+ *  the pilot settle for an edgier landing, so consecutive takes are different
+ *  real runs on the same signed level. */
+const TAKE_STYLES = [0, 0.2, 0.35, 0.5, 0.65, 0.8];
+/** The verified replay runs at 2× so the loop gets back to live play sooner. */
+const REPLAY_SPEED = 2;
 
 const STAGE_LABEL: Record<ShowcaseStage, string> = {
   loading: "LOADING TODAY'S SIGNED MARKET LEVEL…",
   recording: "TAKE · AGENT RECORDING REAL INPUT AT 60 HZ",
   verifying: "TAKE COMPLETE · SERVER REPLAYING THE TRACE",
-  replaying: "REPLAYING THE VERIFIED TRACE · REAL GAMEPLAY, NOT A VIDEO",
+  replaying: "VERIFIED REPLAY (2×) · THE SAME RUN, REPLAYED BY THE ENGINE",
   error: "MARKET TERRAIN UNAVAILABLE",
 };
 
@@ -94,6 +100,9 @@ export default function RunTraceShowcase() {
   const stageRef = useRef<ShowcaseStage>("loading");
   const hudRef = useRef({ score: 0, candlesPassed: 0, tick: 0 });
   const bootedRef = useRef(false);
+  const takeRef = useRef(0);
+  /** Only the baseline take of a visit publishes a receipt (bounded store growth). */
+  const publishRef = useRef(true);
 
   const [stage, setStage] = useState<ShowcaseStage>("loading");
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +115,9 @@ export default function RunTraceShowcase() {
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [recheck, setRecheck] = useState<ShowcaseRecheck | null>(null);
   const [recheckError, setRecheckError] = useState<string | null>(null);
-  const [cycle, setCycle] = useState(0);
+  const [receiptNote, setReceiptNote] = useState<string | null>(null);
+  const [take, setTake] = useState(0);
+  const [style, setStyle] = useState(0);
 
   const updateHud = useCallback((engine: Engine, tick: number) => {
     const next = { score: Math.floor(engine.score), candlesPassed: engine.candlesPassed, tick };
@@ -121,6 +132,12 @@ export default function RunTraceShowcase() {
     const mutation = mutationRef.current;
     if (!data || !mutation) return;
     const seedStr = seedStrRef.current;
+    const takeIndex = takeRef.current;
+    const takeStyle = TAKE_STYLES[takeIndex % TAKE_STYLES.length];
+    takeRef.current = takeIndex + 1;
+    publishRef.current = takeIndex === 0;
+    setTake(takeRef.current);
+    setStyle(takeStyle);
 
     tickRef.current = 0;
     deathRef.current = null;
@@ -140,7 +157,7 @@ export default function RunTraceShowcase() {
     setReceiptError(null);
     setRecheck(null);
     setRecheckError(null);
-    setCycle(0);
+    setReceiptNote(null);
 
     let engine: Engine;
     engine = new Engine(
@@ -164,6 +181,7 @@ export default function RunTraceShowcase() {
     pilotRef.current = new Autopilot(data.candles, seedStr, {
       mods: mutation.mods,
       engine,
+      variation: takeStyle,
       observer: (action, tick) => {
         inputsRef.current.push({ tick, action });
       },
@@ -188,6 +206,7 @@ export default function RunTraceShowcase() {
       seedStrRef.current = payload.seed.date + payload.seed.symbol;
       mutationRef.current = dailyMutation(seedStrRef.current);
       setTerrain(payload);
+      takeRef.current = 0;
       startTake();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load market data.");
@@ -206,7 +225,6 @@ export default function RunTraceShowcase() {
       seedStr,
     );
     replayRef.current = { engine, trace: next, tick: 0, index: 0, hold: 0, fade: FADE_S };
-    setCycle((value) => value + 1);
     stageRef.current = "replaying";
     setStage("replaying");
   }, []);
@@ -273,12 +291,16 @@ export default function RunTraceShowcase() {
       const tamperReport = await postVerify({ ...next, claims: { ...next.claims, score: next.claims.score + 1 } });
       setTamper(tamperReport);
 
-      if (fresh.decision === "ACCEPT" && next.runToken) {
+      if (fresh.decision === "ACCEPT" && next.runToken && publishRef.current) {
         const published = await publishReceipt(next, fresh);
         if (published) {
           setReceipt(published);
           void recheckReceipt(published.id, fresh);
         }
+      } else if (fresh.decision === "ACCEPT") {
+        // Later takes are verified live but not stored, so a loop that keeps
+        // playing fresh runs does not grow the receipt store take after take.
+        setReceiptNote("Verified live. A receipt is issued once per visit, for the baseline take.");
       }
     } catch (err) {
       setReceiptError(err instanceof Error ? err.message : "Verification failed.");
@@ -403,7 +425,7 @@ export default function RunTraceShowcase() {
           updateHud(pilot.eng, tickRef.current);
         }
       } else if (stageRef.current === "replaying") {
-        accumulator += elapsed;
+        accumulator += elapsed * REPLAY_SPEED;
         const replay = replayRef.current;
         if (replay) {
           while (accumulator >= FIXED_DT) {
@@ -425,7 +447,7 @@ export default function RunTraceShowcase() {
               if (replay.trace.seed.date !== today) {
                 void loadTerrain(); // a new UTC day means a new signed terrain
               } else {
-                startReplay(replay.trace);
+                startTake(); // the next take is a new real run, not the same replay
               }
               overlay = 0;
             }
@@ -450,9 +472,9 @@ export default function RunTraceShowcase() {
       cancelAnimationFrame(animation);
       window.removeEventListener("resize", resize);
     };
-  }, [finishTake, loadTerrain, startReplay, updateHud]);
+  }, [finishTake, loadTerrain, startReplay, startTake, updateHud]);
 
-  const proof: ShowcaseProof = { terrain, trace, report, tamper, receipt, receiptError, recheck, recheckError };
+  const proof: ShowcaseProof = { terrain, trace, report, tamper, receipt, receiptError, receiptNote, recheck, recheckError };
   const attested = Boolean(terrain?.runToken);
 
   return (
@@ -463,9 +485,9 @@ export default function RunTraceShowcase() {
           Real gameplay, verified on loop
         </h1>
         <p style={{ color: "#b5bbc1", lineHeight: 1.6, margin: "0 0 20px", maxWidth: 820 }}>
-          An autonomous agent plays today&apos;s signed market level. Its real presses are recorded at 60 Hz, the server replays them
-          and compares every claimed total, and the take then loops here as a deterministic replay — it looks like a clip, but every
-          frame is the game engine replaying verified input.
+          An autonomous agent plays today&apos;s signed market level, take after take. Each take is a fresh real run with a different
+          style, its presses are recorded at 60 Hz and the server replays them to compare every claimed total. The verified take
+          replays once as proof, then the agent plays again — no clip, no video file.
         </p>
 
         <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", alignItems: "start" }}>
@@ -492,7 +514,9 @@ export default function RunTraceShowcase() {
                   {attested ? "SERVER-SIGNED TERRAIN" : "UNATTESTED TERRAIN"}
                 </span>
               )}
-              {stage === "replaying" && <span style={{ color: "#79838a" }}>CYCLE {cycle}</span>}
+              <span style={{ color: "#79838a" }}>
+                TAKE {take} · STYLE {style.toFixed(2)}
+              </span>
             </div>
 
             <canvas
@@ -542,7 +566,7 @@ export default function RunTraceShowcase() {
             )}
             {stage === "replaying" && (
               <p style={{ color: "#79838a", font: `11px ${MONO}`, margin: "0 16px 16px", lineHeight: 1.6 }}>
-                This frame is the recorded trace replayed by the engine — no video file is involved.
+                This frame is the recorded trace replayed at 2× by the engine — no video file is involved. The next take is a new live run.
               </p>
             )}
           </section>

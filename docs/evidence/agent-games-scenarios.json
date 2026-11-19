@@ -1,17 +1,18 @@
 {
   "suite": "agent-games-scenarios/v1",
-  "generatedAt": "2026-11-19T09:59:57.983Z",
-  "baseUrl": "http://127.0.0.1:3000",
+  "generatedAt": "2026-11-19T10:27:10.111Z",
+  "baseUrl": "http://localhost:3000",
   "protocol": {
     "task": "runproof.verify.v1",
     "signatureProfile": "hmac-sha256/raw-body/utf8-key/lowercase-hex (local implemented choice, not a confirmed platform contract)",
     "signingKeyConfigured": true
   },
   "summary": {
-    "total": 14,
-    "passed": 14,
+    "total": 22,
+    "passed": 22,
     "failed": 0,
-    "skipped": 0
+    "skipped": 0,
+    "rateLimitWaits": 1
   },
   "facts": {
     "terrain": {
@@ -138,8 +139,8 @@
       "traceHash": "6cf313e9f36da5be0d6a851272fa3b65a8ace91a1be55e62f1b06c449b79edbf"
     },
     "receipt": {
-      "id": "1241430f-8663-4f57-9290-4965a8b65713",
-      "url": "http://127.0.0.1:3000/runproof/r/1241430f-8663-4f57-9290-4965a8b65713",
+      "id": "fb0b74f3-80b9-4feb-8286-2db5dfdb39ad",
+      "url": "http://localhost:3000/runproof/r/fb0b74f3-80b9-4feb-8286-2db5dfdb39ad",
       "decision": "ACCEPT"
     }
   },
@@ -148,27 +149,27 @@
       "id": "deployment.home",
       "title": "Home route serves the app",
       "status": "PASS",
-      "latencyMs": 105,
+      "latencyMs": 41,
       "detail": {
         "status": 200,
-        "bytes": 65139
+        "bytes": 65140
       }
     },
     {
       "id": "deployment.showcase",
       "title": "Showcase route serves the loop",
       "status": "PASS",
-      "latencyMs": 112,
+      "latencyMs": 69,
       "detail": {
         "status": 200,
-        "bytes": 38986
+        "bytes": 39086
       }
     },
     {
       "id": "terrain.attested",
       "title": "Daily level carries a server-signed run token",
       "status": "PASS",
-      "latencyMs": 1,
+      "latencyMs": 0,
       "detail": {
         "seed": {
           "date": "2026-11-19",
@@ -185,7 +186,7 @@
       "id": "agent.run",
       "title": "Automated player completes a run",
       "status": "PASS",
-      "latencyMs": 25,
+      "latencyMs": 14,
       "detail": {
         "ticks": 498,
         "inputs": 10,
@@ -198,7 +199,7 @@
       "id": "verify.accept",
       "title": "Verifier accepts the run",
       "status": "PASS",
-      "latencyMs": 170,
+      "latencyMs": 39,
       "detail": {
         "decision": "ACCEPT",
         "policy": "runproof/deterministic-replay/v1",
@@ -320,7 +321,7 @@
       "id": "verify.tamper",
       "title": "Verifier flags a tampered run",
       "status": "PASS",
-      "latencyMs": 76,
+      "latencyMs": 60,
       "detail": {
         "decision": "FLAG",
         "reason": "Policy flagged the trace: Claimed score 196 does not match replayed score 195."
@@ -330,10 +331,10 @@
       "id": "receipt.issue",
       "title": "Receipt is issued for the attested run",
       "status": "PASS",
-      "latencyMs": 649,
+      "latencyMs": 77,
       "detail": {
-        "id": "1241430f-8663-4f57-9290-4965a8b65713",
-        "url": "http://127.0.0.1:3000/runproof/r/1241430f-8663-4f57-9290-4965a8b65713",
+        "id": "fb0b74f3-80b9-4feb-8286-2db5dfdb39ad",
+        "url": "http://localhost:3000/runproof/r/fb0b74f3-80b9-4feb-8286-2db5dfdb39ad",
         "decision": "ACCEPT"
       }
     },
@@ -341,9 +342,9 @@
       "id": "receipt.read",
       "title": "Stored receipt re-verifies",
       "status": "PASS",
-      "latencyMs": 911,
+      "latencyMs": 169,
       "detail": {
-        "id": "1241430f-8663-4f57-9290-4965a8b65713",
+        "id": "fb0b74f3-80b9-4feb-8286-2db5dfdb39ad",
         "decision": "ACCEPT",
         "terrainAttested": true,
         "traceHash": "6cf313e9f36da5be0d6a851272fa3b65a8ace91a1be55e62f1b06c449b79edbf",
@@ -354,7 +355,7 @@
       "id": "receipt.unattested",
       "title": "Receipt endpoint refuses unattested terrain",
       "status": "PASS",
-      "latencyMs": 82,
+      "latencyMs": 56,
       "detail": {
         "status": 422
       }
@@ -363,7 +364,7 @@
       "id": "protocol.preflight",
       "title": "Signed preflight handshake",
       "status": "PASS",
-      "latencyMs": 465,
+      "latencyMs": 52,
       "detail": {
         "status": 200,
         "body": {
@@ -377,7 +378,7 @@
       "id": "protocol.task",
       "title": "Signed verification task",
       "status": "PASS",
-      "latencyMs": 79,
+      "latencyMs": 71,
       "detail": {
         "status": 200,
         "decision": "ACCEPT",
@@ -388,7 +389,7 @@
       "id": "protocol.bad-signature",
       "title": "Unsigned task is rejected",
       "status": "PASS",
-      "latencyMs": 82,
+      "latencyMs": 54,
       "detail": {
         "status": 401
       }
@@ -397,7 +398,7 @@
       "id": "protocol.idempotency",
       "title": "Repeated task returns the same signed answer",
       "status": "PASS",
-      "latencyMs": 167,
+      "latencyMs": 123,
       "detail": {
         "identicalBody": true,
         "identicalSignature": true
@@ -407,9 +408,101 @@
       "id": "protocol.conflict",
       "title": "Reused task ID with a new body is refused",
       "status": "PASS",
-      "latencyMs": 195,
+      "latencyMs": 49433,
       "detail": {
         "status": 409
+      }
+    },
+    {
+      "id": "verify.honest-loss",
+      "title": "A lost run is ACCEPT, not FLAG",
+      "status": "PASS",
+      "latencyMs": 59,
+      "detail": {
+        "decision": "ACCEPT",
+        "score": 95,
+        "deathCause": "crumbled",
+        "ticks": 246
+      }
+    },
+    {
+      "id": "verify.loss-inflated",
+      "title": "A lost run claiming points is flagged",
+      "status": "PASS",
+      "latencyMs": 55,
+      "detail": {
+        "decision": "FLAG",
+        "codes": [
+          "score_mismatch"
+        ]
+      }
+    },
+    {
+      "id": "verify.after-death",
+      "title": "A trace that keeps going after death is flagged",
+      "status": "PASS",
+      "latencyMs": 53,
+      "detail": {
+        "decision": "FLAG",
+        "codes": [
+          "ticks_after_death"
+        ]
+      }
+    },
+    {
+      "id": "verify.terrain-tamper",
+      "title": "Hand-edited candles break the signed terrain",
+      "status": "PASS",
+      "latencyMs": 57,
+      "detail": {
+        "decision": "FLAG",
+        "codes": [
+          "run_token_terrain_mismatch"
+        ]
+      }
+    },
+    {
+      "id": "verify.mutation-swap",
+      "title": "A wrong daily mutation is flagged",
+      "status": "PASS",
+      "latencyMs": 75,
+      "detail": {
+        "claimed": "lowgrav",
+        "expected": "clean",
+        "codes": [
+          "mutation_mismatch"
+        ]
+      }
+    },
+    {
+      "id": "verify.foreign-token",
+      "title": "A run token for another symbol is refused",
+      "status": "PASS",
+      "latencyMs": 128,
+      "detail": {
+        "borrowedFrom": "ETHUSDT",
+        "decision": "FLAG",
+        "codes": [
+          "run_token_seed_mismatch"
+        ]
+      }
+    },
+    {
+      "id": "verify.oversized",
+      "title": "An oversized body is refused before replay",
+      "status": "PASS",
+      "latencyMs": 81,
+      "detail": {
+        "status": 413
+      }
+    },
+    {
+      "id": "receipt.invalid-json",
+      "title": "Malformed JSON is a 400, not a crash",
+      "status": "PASS",
+      "latencyMs": 60,
+      "detail": {
+        "status": 400
       }
     }
   ]

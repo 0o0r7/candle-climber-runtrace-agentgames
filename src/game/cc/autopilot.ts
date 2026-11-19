@@ -16,6 +16,7 @@ import { Engine, GRAVITY, PLAYER_W, PLAYER_H, CAM_BASE, CAM_ACCEL, CAM_MAX } fro
 import { buildPlatforms } from "./level";
 import { BASE_MODS, type MutationMods } from "./mutations";
 import { evalPressNow, FIXED_DT, type PressEval } from "./rival/planner";
+import { mulberry32 } from "./rng";
 import type { Candle, Platform } from "./types";
 
 /** Below this landing margin (px) an option counts as "edgy". */
@@ -37,6 +38,11 @@ export interface AutopilotOptions {
    *  Must be built from the same candles, seed and mods. */
   engine?: Engine;
   observer?: AutopilotObserver;
+  /** Style dial, 0–1. 0 (default) always takes the most centered landing; higher
+   *  values let the pilot settle for an edgier option now and then, the way a
+   *  human plays. Still deterministic for a given value: the showcase varies it
+   *  per take so each take is a different real run. */
+  variation?: number;
 }
 
 export class Autopilot {
@@ -47,12 +53,16 @@ export class Autopilot {
   private plan: Plan | null = null;
   private cutPending = false;
   private tickIndex = 0;
+  private readonly variation: number;
+  private readonly rng: () => number;
 
   constructor(candles: Candle[], seed: string, options: AutopilotOptions = {}) {
     const mods = options.mods ?? BASE_MODS;
     this.eng = options.engine
       ?? new Engine(buildPlatforms(candles, seed), { onDeath: () => {}, onScore: () => {} }, mods, seed);
     this.observer = options.observer;
+    this.variation = Math.max(0, Math.min(1, options.variation ?? 0));
+    this.rng = mulberry32(Math.round(this.variation * 0xffffffff) || 1);
   }
 
   /** Fixed steps completed so far (the tick that will be stepped next). */
@@ -103,11 +113,11 @@ export class Autopilot {
     return undefined;
   }
 
-  /** Scan every press moment in the take-off window; take the most centered landing. */
+  /** Scan every press moment in the take-off window and rank the landings. */
   private makePlan(): Plan {
     const e = this.eng;
     let px = e.px, py = e.py, vy = e.vy, t = e.time, coyote = e.coyote;
-    let best: { wait: number; hold: boolean; score: number } | null = null;
+    const candidates: { wait: number; hold: boolean; score: number }[] = [];
     let lastValid = 0;
 
     for (let wait = 0; wait <= MAX_WAIT; wait++) {
@@ -124,7 +134,7 @@ export class Autopilot {
         if (!c.ok) continue;
         // centered landings win; green targets get a bonus (reds force an instant re-jump)
         const score = Math.min(c.margin, 30) + (c.risky ? 0 : 6) + (c.margin >= SAFE_MARGIN ? 20 : 0);
-        if (!best || score > best.score) best = { wait, hold, score };
+        candidates.push({ wait, hold, score });
       }
 
       // advance one idle tick (mirror of engine.step without a press)
@@ -140,7 +150,15 @@ export class Autopilot {
       }
     }
     // nothing lands — jump at the last possible moment (go out jumping)
-    return best ?? { wait: lastValid, hold: true };
+    if (candidates.length === 0) return { wait: lastValid, hold: true };
+    candidates.sort((a, b) => b.score - a.score);
+    // Style dial: 0 always takes the best landing; higher values sometimes settle
+    // for one of the next-best take-off moments, the way a human plays.
+    const pool = candidates.slice(0, 12);
+    const pick = this.variation > 0 && pool.length > 1 && this.rng() < this.variation
+      ? pool[1 + Math.floor(this.rng() * (pool.length - 1))]
+      : pool[0];
+    return { wait: pick.wait, hold: pick.hold };
   }
 }
 

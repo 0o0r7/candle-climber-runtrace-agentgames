@@ -22,6 +22,8 @@ export interface ShowcaseProof {
   tamper: RunProofReport | null;
   receipt: ShowcaseReceipt | null;
   receiptError: string | null;
+  /** Set when a take was verified live but intentionally not stored. */
+  receiptNote: string | null;
   recheck: ShowcaseRecheck | null;
   recheckError: string | null;
 }

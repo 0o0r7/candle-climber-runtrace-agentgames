@@ -46,7 +46,7 @@ function Row({ label, tag, tone, children }: { label: string; tag: string; tone:
 }
 
 export default function ShowcaseProofPanel({ stage, proof }: { stage: ShowcaseStage; proof: ShowcaseProof }) {
-  const { terrain, trace, report, tamper, receipt, receiptError, recheck, recheckError } = proof;
+  const { terrain, trace, report, tamper, receipt, receiptError, receiptNote, recheck, recheckError } = proof;
   const signed = Boolean(terrain?.runToken);
   const tamperIssue = tamper?.issues[0];
 
@@ -131,8 +131,8 @@ export default function ShowcaseProofPanel({ stage, proof }: { stage: ShowcaseSt
 
       <Row
         label="SHAREABLE RECEIPT"
-        tag={receipt ? (receipt.reused ? "EXISTING" : "ISSUED") : receiptError ? "FAILED" : "WAIT"}
-        tone={receipt ? "ok" : receiptError ? "bad" : "pending"}
+        tag={receipt ? (receipt.reused ? "EXISTING" : "ISSUED") : receiptError ? "FAILED" : receiptNote ? "LIVE ONLY" : "WAIT"}
+        tone={receipt ? "ok" : receiptError ? "bad" : receiptNote ? "ok" : "pending"}
       >
         {receipt ? (
           <a href={`/runproof/r/${receipt.id}`} style={{ color: "#f1f3f4" }}>
@@ -140,6 +140,8 @@ export default function ShowcaseProofPanel({ stage, proof }: { stage: ShowcaseSt
           </a>
         ) : receiptError ? (
           receiptError
+        ) : receiptNote ? (
+          receiptNote
         ) : (
           "Stored with its trace, so anyone with the link can re-check it."
         )}
