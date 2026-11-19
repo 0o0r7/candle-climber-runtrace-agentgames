@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import ProtocolShell from "@/components/protocol/ProtocolShell";
 import { Autopilot } from "@/game/cc/autopilot";
 import { Engine, VIEW_H, VIEW_W } from "@/game/cc/engine";
 import { buildPlatforms } from "@/game/cc/level";
@@ -386,18 +387,18 @@ export default function RunTraceShowcase() {
       if (engine) {
         render(context, engine, seedStr, mutationId);
       } else {
-        context.fillStyle = "#0b0d0f";
+        context.fillStyle = "#08090C";
         context.fillRect(0, 0, VIEW_W, VIEW_H);
-        context.fillStyle = "#ccff00";
+        context.fillStyle = "#7CFFB2";
         context.font = `700 26px ${MONO}`;
         context.fillText("RUNTRACE", 36, 66);
-        context.fillStyle = "#b5bbc1";
+        context.fillStyle = "#B3BDC4";
         context.font = `15px ${MONO}`;
         context.fillText("loading today's signed market level…", 36, 98);
       }
       if (overlay > 0) {
         context.setTransform(dpr, 0, 0, dpr, 0, 0);
-        context.fillStyle = `rgba(9,11,13,${Math.min(1, overlay)})`;
+        context.fillStyle = `rgba(8,9,12,${Math.min(1, overlay)})`;
         context.fillRect(0, 0, rect.width, rect.height);
       }
     };
@@ -478,43 +479,42 @@ export default function RunTraceShowcase() {
   const attested = Boolean(terrain?.runToken);
 
   return (
-    <main style={{ minHeight: "100vh", background: "#090b0d", color: "#f1f3f4", fontFamily: "system-ui, sans-serif", padding: "24px 16px 48px" }}>
-      <div style={{ maxWidth: 1120, margin: "0 auto" }}>
-        <p style={{ color: "#ccff00", font: `700 12px ${MONO}`, letterSpacing: ".13em", margin: "0 0 8px" }}>RUNTRACE · SHOWCASE LOOP</p>
+    <ProtocolShell active="showcase" width={1120}>
+        <p style={{ color: "var(--rt-pass)", font: `700 12px ${MONO}`, letterSpacing: ".13em", margin: "0 0 8px" }}>RUNTRACE · SHOWCASE LOOP</p>
         <h1 style={{ fontSize: "clamp(28px, 6vw, 48px)", letterSpacing: "-.04em", lineHeight: 1.02, margin: "0 0 12px" }}>
           Real gameplay, verified on loop
         </h1>
-        <p style={{ color: "#b5bbc1", lineHeight: 1.6, margin: "0 0 20px", maxWidth: 820 }}>
+        <p style={{ color: "var(--rt-muted-2)", lineHeight: 1.6, margin: "0 0 20px", maxWidth: 820 }}>
           An autonomous agent plays today&apos;s signed market level, take after take. Each take is a fresh real run with a different
           style, its presses are recorded at 60 Hz and the server replays them to compare every claimed total. The verified take
           replays once as proof, then the agent plays again — no clip, no video file.
         </p>
 
         <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", alignItems: "start" }}>
-          <section style={{ background: "#111518", border: "1px solid #283036", borderRadius: 10, overflow: "hidden" }}>
+          <section style={{ background: "var(--rt-panel)", border: "1px solid var(--rt-hairline)", borderRadius: 10, overflow: "hidden" }}>
             <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "space-between", padding: "12px 16px" }}>
-              <span style={{ color: "#c4cbd0", font: `12px ${MONO}` }}>{STAGE_LABEL[stage]}</span>
-              <span style={{ color: "#f1f3f4", font: `12px ${MONO}` }}>
+              <span style={{ color: "var(--rt-ink-2)", font: `12px ${MONO}` }}>{STAGE_LABEL[stage]}</span>
+              <span style={{ color: "var(--rt-ink)", font: `12px ${MONO}` }}>
                 SCORE {hud.score} · CANDLES {hud.candlesPassed} · TICK {hud.tick}
               </span>
             </div>
             <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: 10, padding: "0 16px 12px", font: `12px ${MONO}` }}>
-              <span style={{ color: "#8d979e" }}>
+              <span style={{ color: "var(--rt-muted)" }}>
                 {terrain ? `${terrain.seed.symbol} · ${terrain.seed.date} · ${terrain.candles.length} closed candles` : "no terrain yet"}
               </span>
               {terrain && (
                 <span
                   style={{
-                    border: `1px solid ${attested ? "#687c18" : "#75443e"}`,
+                    border: `1px solid ${attested ? "var(--rt-pass-line)" : "var(--rt-flag-line)"}`,
                     borderRadius: 999,
-                    color: attested ? "#ccff00" : "#ff9a8b",
+                    color: attested ? "var(--rt-pass)" : "var(--rt-flag)",
                     padding: "2px 8px",
                   }}
                 >
                   {attested ? "SERVER-SIGNED TERRAIN" : "UNATTESTED TERRAIN"}
                 </span>
               )}
-              <span style={{ color: "#79838a" }}>
+              <span style={{ color: "var(--rt-muted)" }}>
                 TAKE {take} · STYLE {style.toFixed(2)}
               </span>
             </div>
@@ -522,7 +522,7 @@ export default function RunTraceShowcase() {
             <canvas
               ref={canvasRef}
               aria-label="RunTrace showcase canvas"
-              style={{ aspectRatio: `${VIEW_W} / ${VIEW_H}`, background: "#0b0d0f", display: "block", width: "100%" }}
+              style={{ aspectRatio: `${VIEW_W} / ${VIEW_H}`, background: "var(--rt-bg)", display: "block", width: "100%" }}
             />
 
             <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: 10, padding: 16 }}>
@@ -530,10 +530,10 @@ export default function RunTraceShowcase() {
                 onClick={() => void loadTerrain()}
                 disabled={stage === "loading"}
                 style={{
-                  background: stage === "loading" ? "#626a70" : "#ccff00",
+                  background: stage === "loading" ? "var(--rt-disabled)" : "var(--rt-pass)",
                   border: "none",
                   borderRadius: 6,
-                  color: "#0b0d0f",
+                  color: "var(--rt-accent-ink)",
                   cursor: stage === "loading" ? "default" : "pointer",
                   font: `700 12px ${MONO}`,
                   letterSpacing: ".06em",
@@ -545,10 +545,10 @@ export default function RunTraceShowcase() {
               <a
                 href="/runproof"
                 style={{
-                  background: "#20272c",
-                  border: "1px solid #526068",
+                  background: "var(--rt-panel-2)",
+                  border: "1px solid var(--rt-hairline-strong)",
                   borderRadius: 6,
-                  color: "#f1f3f4",
+                  color: "var(--rt-ink)",
                   font: `700 12px ${MONO}`,
                   letterSpacing: ".06em",
                   padding: "10px 14px",
@@ -560,12 +560,12 @@ export default function RunTraceShowcase() {
             </div>
 
             {error && (
-              <p role="alert" style={{ color: "#ff9a8b", margin: "0 16px 16px", lineHeight: 1.5 }}>
+              <p role="alert" style={{ color: "var(--rt-flag)", margin: "0 16px 16px", lineHeight: 1.5 }}>
                 Could not load market data ({error}). Retry in a moment.
               </p>
             )}
             {stage === "replaying" && (
-              <p style={{ color: "#79838a", font: `11px ${MONO}`, margin: "0 16px 16px", lineHeight: 1.6 }}>
+              <p style={{ color: "var(--rt-muted)", font: `11px ${MONO}`, margin: "0 16px 16px", lineHeight: 1.6 }}>
                 This frame is the recorded trace replayed at 2× by the engine — no video file is involved. The next take is a new live run.
               </p>
             )}
@@ -573,7 +573,6 @@ export default function RunTraceShowcase() {
 
           <ShowcaseProofPanel stage={stage} proof={proof} />
         </div>
-      </div>
-    </main>
+    </ProtocolShell>
   );
 }

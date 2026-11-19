@@ -55,9 +55,14 @@ Public origin for this build: **https://candle-climber-runtrace.vercel.app**
 The build must look like its own product — distinct from the original Candle Climber and consistent with the zkVerify protocol ecosystem.
 
 - [x] `DONE` — Three candidate directions, token sets, and the implementation plan in [../design/visual-direction.md](../design/visual-direction.md).
-- [ ] `USER` — Choose a direction and send the mascot design package.
-- [ ] `OPEN` — Implement the chosen direction on `/`, `/runproof`, `/runproof/showcase`, and receipt pages.
-- [ ] `OPEN` — Re-verify the changed screens at desktop and mobile, then update screenshots in the submission material.
+- [x] `DONE` — Direction chosen 2026-11-19: **A (Verification Console)**, with B's certificate
+      treatment on the receipt page.
+- [x] `CODE DONE` — Tokens, the console shell (route switcher + claim chip), the console and
+      showcase palette, and the receipt certificate are implemented.
+- [ ] `USER` — Send the mascot design package (optional; one mascot moment per screen once it
+      arrives, never over body text and never in place of the verdict or the hash).
+- [ ] `OPEN` — Re-verify the changed screens on the deployment, then update the screenshots in
+      the submission material.
 
 ## 6. Account and eligibility
 

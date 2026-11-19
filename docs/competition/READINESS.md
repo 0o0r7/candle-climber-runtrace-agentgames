@@ -123,6 +123,34 @@ curl -s "$BASE/api/candles" | head -c 300
 Verified by `bun scripts/agent-games-scenarios.ts` (`protocol.*` scenarios) and
 `test/agentgames-adapter.test.ts` / `test/agentgames-tasks.test.ts`.
 
+### B3.1 Negative-path matrix — the false side of every claim
+
+Every claim this build makes has a case that is supposed to fail. One command
+covers the whole matrix: `bun scripts/agent-games-scenarios.ts` (machine-readable
+result in `docs/evidence/agent-games-scenarios.json`).
+
+| # | Scenario id | Input under test | Expected | Asserted issue code |
+|---|---|---|---|---|
+| 1 | `verify.accept` | a completed, attested run | `ACCEPT` | — |
+| 2 | `verify.honest-loss` | a real run that ends in a loss | `ACCEPT` — losing is not cheating | death cause + replayed score recorded |
+| 3 | `verify.loss-inflated` | the lost run with `claims.score` raised to 500 | `FLAG` | `score_mismatch` |
+| 4 | `verify.after-death` | the lost trace extended 60 ticks past death | `FLAG` | `ticks_after_death` |
+| 5 | `verify.tamper` | an accepted trace with score +1 | `FLAG` | `score_mismatch` |
+| 6 | `verify.terrain-tamper` | one candle's close/high hand-edited | `FLAG` | `run_token_terrain_mismatch` |
+| 7 | `verify.mutation-swap` | a different daily mutation id | `FLAG` | `mutation_mismatch` |
+| 8 | `verify.foreign-token` | a run token issued for another symbol | `FLAG` | `run_token_seed_mismatch` |
+| 9 | `receipt.unattested` | terrain with no server run token | `422`, no receipt issued | — |
+| 10 | `protocol.bad-signature` | a task with a wrong `x-agent-games-signature` | `401`, nothing executed | — |
+| 11 | `protocol.conflict` | a reused `task_id` with a different body | `409`, first answer unchanged | — |
+| 12 | `verify.oversized` | a 2.2 MB body | `413` before any replay | — |
+| 13 | `receipt.invalid-json` | malformed JSON | `400`, no crash | — |
+
+- [x] Local run 2026-11-19: **22/22 scenarios passed** (`docs/evidence/agent-games-scenarios.json`).
+- [ ] Every row passes on the deployed host (re-run the same command against the live URL).
+- [ ] Rows 3–8 assert *their own* issue code, so a `FLAG` for an unrelated reason
+      still counts as a failure — the matrix tests the diagnosis, not just the verdict.
+- [ ] Row 2 guards the honest direction: a loss must never be reported as cheating.
+
 ### B4. Receipts survive
 
 ```sh

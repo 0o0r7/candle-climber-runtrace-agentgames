@@ -1,8 +1,10 @@
 # Visual direction — this build must not look like the original game
 
-Status: **proposal**. Nothing below is implemented yet; the current UI is the
-original Candle Climber surface. This document is the working brief for the
-redesign, and the decision it needs from the owner is at the end.
+Status: **implemented** — the owner chose **A (Verification Console) with B's
+receipt page** on 2026-11-19. Tokens, the protocol shell, the console/showcase
+palette, and the receipt certificate are in the build; the mascot step is still
+open and is not a blocker. The reasoning below is kept as the record of the
+decision.
 
 ## Why a redesign is required
 

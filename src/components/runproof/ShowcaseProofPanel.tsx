@@ -8,24 +8,24 @@ const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 type Tone = "ok" | "bad" | "pending" | "active";
 
 const TONE_COLOR: Record<Tone, string> = {
-  ok: "#ccff00",
-  bad: "#ff9a8b",
-  pending: "#79838a",
-  active: "#ffcf6b",
+  ok: "var(--rt-pass)",
+  bad: "var(--rt-flag)",
+  pending: "var(--rt-muted)",
+  active: "var(--rt-flag)",
 };
 
 const TONE_BORDER: Record<Tone, string> = {
-  ok: "#687c18",
-  bad: "#75443e",
-  pending: "#2b3339",
-  active: "#7a6324",
+  ok: "var(--rt-pass-line)",
+  bad: "var(--rt-flag-line)",
+  pending: "var(--rt-hairline)",
+  active: "var(--rt-flag-line)",
 };
 
 function Row({ label, tag, tone, children }: { label: string; tag: string; tone: Tone; children: ReactNode }) {
   return (
-    <div style={{ borderTop: "1px solid #1d2429", padding: "11px 0" }}>
+    <div style={{ borderTop: "1px solid var(--rt-panel-2)", padding: "11px 0" }}>
       <div style={{ alignItems: "center", display: "flex", gap: 10, justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ color: "#c4cbd0", font: `700 11px ${MONO}`, letterSpacing: ".1em" }}>{label}</span>
+        <span style={{ color: "var(--rt-ink-2)", font: `700 11px ${MONO}`, letterSpacing: ".1em" }}>{label}</span>
         <span
           style={{
             border: `1px solid ${TONE_BORDER[tone]}`,
@@ -40,7 +40,7 @@ function Row({ label, tag, tone, children }: { label: string; tag: string; tone:
           {tag}
         </span>
       </div>
-      <div style={{ color: "#b5bbc1", fontSize: 12.5, lineHeight: 1.55 }}>{children}</div>
+      <div style={{ color: "var(--rt-muted-2)", fontSize: 12.5, lineHeight: 1.55 }}>{children}</div>
     </div>
   );
 }
@@ -53,12 +53,12 @@ export default function ShowcaseProofPanel({ stage, proof }: { stage: ShowcaseSt
   return (
     <section
       aria-label="Attestation states"
-      style={{ background: "#111518", border: "1px solid #283036", borderRadius: 10, padding: "14px 16px" }}
+      style={{ background: "var(--rt-panel)", border: "1px solid var(--rt-hairline)", borderRadius: 10, padding: "14px 16px" }}
     >
-      <p style={{ color: "#ccff00", font: `700 11px ${MONO}`, letterSpacing: ".13em", margin: "0 0 4px" }}>
+      <p style={{ color: "var(--rt-pass)", font: `700 11px ${MONO}`, letterSpacing: ".13em", margin: "0 0 4px" }}>
         WHAT THIS LOOP PROVES
       </p>
-      <p style={{ color: "#8d979e", fontSize: 12.5, lineHeight: 1.5, margin: "0 0 4px" }}>
+      <p style={{ color: "var(--rt-muted)", fontSize: 12.5, lineHeight: 1.5, margin: "0 0 4px" }}>
         Every state below is produced by this page while it runs — nothing is pre-recorded.
       </p>
 
@@ -73,7 +73,7 @@ export default function ShowcaseProofPanel({ stage, proof }: { stage: ShowcaseSt
             {terrain.seed.source}
             <br />
             {signed ? (
-              <span style={{ font: `11px ${MONO}`, color: "#79838a" }}>run token {terrain.runToken?.slice(0, 18)}…</span>
+              <span style={{ font: `11px ${MONO}`, color: "var(--rt-muted)" }}>run token {terrain.runToken?.slice(0, 18)}…</span>
             ) : (
               "The feed returned fallback candles without a server signature; a receipt cannot be issued."
             )}
@@ -102,7 +102,7 @@ export default function ShowcaseProofPanel({ stage, proof }: { stage: ShowcaseSt
                 <li key={`${index}-${item}`}>{item}</li>
               ))}
             </ul>
-            <span style={{ color: "#79838a", font: `11px ${MONO}` }}>policy {report.policy} · deterministic code, not an LLM</span>
+            <span style={{ color: "var(--rt-muted)", font: `11px ${MONO}` }}>policy {report.policy} · deterministic code, not an LLM</span>
           </>
         ) : (
           "The server re-simulates the recorded inputs and compares every claimed total."
@@ -120,7 +120,7 @@ export default function ShowcaseProofPanel({ stage, proof }: { stage: ShowcaseSt
             {tamperIssue ? (
               <>
                 <br />
-                <span style={{ font: `11px ${MONO}`, color: "#ff9a8b" }}>{tamperIssue.code}: {tamperIssue.message}</span>
+                <span style={{ font: `11px ${MONO}`, color: "var(--rt-flag)" }}>{tamperIssue.code}: {tamperIssue.message}</span>
               </>
             ) : null}
           </>
@@ -135,7 +135,7 @@ export default function ShowcaseProofPanel({ stage, proof }: { stage: ShowcaseSt
         tone={receipt ? "ok" : receiptError ? "bad" : receiptNote ? "ok" : "pending"}
       >
         {receipt ? (
-          <a href={`/runproof/r/${receipt.id}`} style={{ color: "#f1f3f4" }}>
+          <a href={`/runproof/r/${receipt.id}`} style={{ color: "var(--rt-ink)" }}>
             /runproof/r/{receipt.id} ↗
           </a>
         ) : receiptError ? (
@@ -157,21 +157,21 @@ export default function ShowcaseProofPanel({ stage, proof }: { stage: ShowcaseSt
           : recheckError ?? "Re-reads the receipt from the store and replays it again."}
       </Row>
 
-      <div style={{ borderTop: "1px solid #1d2429", marginTop: 4, paddingTop: 10 }}>
-        <p style={{ color: "#8d979e", font: `700 10px ${MONO}`, letterSpacing: ".1em", margin: "0 0 6px" }}>
+      <div style={{ borderTop: "1px solid var(--rt-panel-2)", marginTop: 4, paddingTop: 10 }}>
+        <p style={{ color: "var(--rt-muted)", font: `700 10px ${MONO}`, letterSpacing: ".1em", margin: "0 0 6px" }}>
           AGENT GAMES · WILDCARD CHECKLIST
         </p>
-        <ul style={{ color: "#b5bbc1", fontSize: 11.5, lineHeight: 1.6, listStyle: "none", margin: 0, padding: 0 }}>
-          <li><span style={{ color: "#ccff00" }}>✓</span> Public demo: this page, plus the console and receipt routes</li>
-          <li><span style={{ color: "#ccff00" }}>✓</span> Public HTTPS endpoints: verify and receipt routes</li>
-          <li><span style={{ color: "#ccff00" }}>✓</span> Build notes: docs/runproof and docs/competition</li>
-          <li><span style={{ color: "#79838a" }}>–</span> zkVerify proof: optional for this track, not included</li>
+        <ul style={{ color: "var(--rt-muted-2)", fontSize: 11.5, lineHeight: 1.6, listStyle: "none", margin: 0, padding: 0 }}>
+          <li><span style={{ color: "var(--rt-pass)" }}>✓</span> Public demo: this page, plus the console and receipt routes</li>
+          <li><span style={{ color: "var(--rt-pass)" }}>✓</span> Public HTTPS endpoints: verify and receipt routes</li>
+          <li><span style={{ color: "var(--rt-pass)" }}>✓</span> Build notes: docs/runproof and docs/competition</li>
+          <li><span style={{ color: "var(--rt-muted)" }}>–</span> zkVerify proof: optional for this track, not included</li>
         </ul>
       </div>
 
-      <div style={{ borderTop: "1px solid #1d2429", marginTop: 10, paddingTop: 10 }}>
-        <p style={{ color: "#8d979e", font: `700 10px ${MONO}`, letterSpacing: ".1em", margin: "0 0 6px" }}>NOT CLAIMED</p>
-        <ul style={{ color: "#79838a", fontSize: 11.5, lineHeight: 1.6, margin: 0, paddingLeft: 18 }}>
+      <div style={{ borderTop: "1px solid var(--rt-panel-2)", marginTop: 10, paddingTop: 10 }}>
+        <p style={{ color: "var(--rt-muted)", font: `700 10px ${MONO}`, letterSpacing: ".1em", margin: "0 0 6px" }}>NOT CLAIMED</p>
+        <ul style={{ color: "var(--rt-muted)", fontSize: 11.5, lineHeight: 1.6, margin: 0, paddingLeft: 18 }}>
           <li>No zero-knowledge proof and no zkVerify submission.</li>
           <li>Terrain is server-signed; player identity and input origin are not.</li>
           <li>Replay consistency only — a bounded sanity check, not an independent physics oracle.</li>
