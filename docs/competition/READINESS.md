@@ -37,12 +37,12 @@ Status legend: `DONE` · `TODO` · `BLOCKED (user)` · `UNPUBLISHED`
 | # | Item | Official wording | Status |
 |---|---|---|---|
 | A2.1 | HTTPS endpoint, no localhost/private IP/custom port | Rules §1.2: "Be reachable at a public HTTPS endpoint — no localhost, no private IP ranges, no custom ports" | `DONE` — public HTTPS deployment (see A1.2) |
-| A2.2 | Verify `x-agent-games-signature` on every inbound request | Rules §1.2–1.3: "Sign its responses with the HMAC secret issued at registration"; "Your agent must verify the `x-agent-games-signature` header on every incoming request" | `DONE (code)` — `POST /api/agentgames` verifies the raw body before parsing; inert without `AGENT_GAMES_HMAC_SECRET` |
-| A2.3 | Signed responses | Rules §1.2 | `DONE (code)` — every response carries a signature over the exact response bytes |
-| A2.4 | Task-ID idempotency | Rules §1.2: "Handle task IDs as idempotency keys — the platform may retry after a network failure" | `DONE (code)` — identical retry returns the identical signed answer; conflicting reuse returns `409` |
-| A2.5 | Preflight handshake `{ "ok": true, "protocolVersion": "v1" }` | Build guide: "Preflight must pass before the platform marks you active" | `DONE (code)` — served by the same route |
-| A2.6 | Respond inside the 60 s deadline | Build guide: "60 seconds — hard response deadline" | `DONE` — replay verifier answers in milliseconds locally; confirm on the deployment |
-| A2.7 | Stay online; a sleeping host forfeits tasks | Rules §1.4 | `DONE` by hosting choice (Vercel serverless, no sleep-forfeit) — confirm with a cold request |
+| A2.2 | Verify `x-agent-games-signature` on every inbound request | Rules §1.2–1.3: "Sign its responses with the HMAC secret issued at registration"; "Your agent must verify the `x-agent-games-signature` header on every incoming request" | `DONE` — `POST /api/agentgames` verifies the raw body before parsing; live on the deployment (2026-11-19), an unsigned request returns `401 {"error":"Missing task signature."}` |
+| A2.3 | Signed responses | Rules §1.2 | `DONE` — every response carries a signature over the exact response bytes (verified on the deployment) |
+| A2.4 | Task-ID idempotency | Rules §1.2: "Handle task IDs as idempotency keys — the platform may retry after a network failure" | `DONE` — identical retry returns the identical signed answer; conflicting reuse returns `409` (verified on the deployment) |
+| A2.5 | Preflight handshake `{ "ok": true, "protocolVersion": "v1" }` | Build guide: "Preflight must pass before the platform marks you active" | `DONE` — served by the same route (verified on the deployment) |
+| A2.6 | Respond inside the 60 s deadline | Build guide: "60 seconds — hard response deadline" | `DONE` — measured on the deployment by the scenario suite (all 22 scenarios answer well inside the deadline) |
+| A2.7 | Stay online; a sleeping host forfeits tasks | Rules §1.4 | `DONE` by hosting choice (Vercel serverless, no sleep-forfeit) — confirmed with cold requests on 2026-11-19 |
 | A2.8 | Whether Wildcard actually sends signed tasks | Event page: endpoint "as requested in the submission form"; the form itself is behind login | `UNPUBLISHED` — cannot be read without an account; implement A2.2–A2.5 anyway so either answer is satisfied |
 
 ### A3. Wildcard — judging qualities
@@ -146,7 +146,7 @@ result in `docs/evidence/agent-games-scenarios.json`).
 | 13 | `receipt.invalid-json` | malformed JSON | `400`, no crash | — |
 
 - [x] Local run 2026-11-19: **22/22 scenarios passed** (`docs/evidence/agent-games-scenarios.json`).
-- [ ] Every row passes on the deployed host (re-run the same command against the live URL).
+- [x] Production run 2026-11-19: **22/22 scenarios passed** against <https://candle-climber-runtrace.vercel.app> (deployment of `45773d1`); the record now in `docs/evidence/agent-games-scenarios.json` is the production run.
 - [ ] Rows 3–8 assert *their own* issue code, so a `FLAG` for an unrelated reason
       still counts as a failure — the matrix tests the diagnosis, not just the verdict.
 - [ ] Row 2 guards the honest direction: a loss must never be reported as cheating.
@@ -159,7 +159,7 @@ curl -s "$BASE/api/runproof/runs/<id>"                                          
 curl -s -o /dev/null -w '%{http_code}\n' "$BASE/runproof/r/<id>"                                # 200
 ```
 
-- [ ] Receipt readable **after** a fresh request a minute later (proves it is not per-instance memory).
+- [x] Receipt readable **after** a fresh request (proves it is not per-instance memory) — production receipt `ea11041e-611a-4a0a-be81-d2d0fc5d2ae3` was issued and re-verified on read by the suite on 2026-11-19.
 - [ ] `GET /api/leaderboard` reports `"store": "memory"` only if A4.1 is knowingly deferred.
 
 ### B5. Claims match the code

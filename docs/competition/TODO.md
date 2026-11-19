@@ -29,9 +29,10 @@ Public origin for this build: **https://candle-climber-runtrace.vercel.app**
 - [x] `CODE DONE` — Signed protocol endpoint `POST /api/agentgames`: inbound signature check, `agent-games.preflight.v1` handshake, signed responses, task-ID idempotency.
 - [x] `CODE DONE` — 14-scenario end-to-end suite (`bun scripts/agent-games-scenarios.ts`) with machine-readable evidence in [../evidence/agent-games-scenarios.json](../evidence/agent-games-scenarios.json).
 - [x] `DONE` — Durable receipts on the deployment (MongoDB; `GET /api/leaderboard` reports `"store": "mongo"`).
-- [ ] `OPEN` — Redeploy this branch to Vercel so the live site includes the identity fix and `/api/agentgames`.
-- [ ] `USER` — Set `AGENT_GAMES_HMAC_SECRET` on Vercel to the secret issued at Agent Games registration (a development placeholder exists locally only).
-- [ ] `OPEN` — Re-run the scenario suite against the deployed host and store the production evidence file.
+- [x] `DONE` — Redeployed to production on 2026-11-19 (commit `45773d1`, <https://candle-climber-runtrace.vercel.app>); `/api/agentgames` is live and rejects an unsigned request with `401`.
+- [x] `DONE` — `AGENT_GAMES_HMAC_SECRET` set on Vercel for production, preview and development (2026-11-19). If the platform issues a different key at registration, replace this value.
+- [x] `DONE` — Scenario suite re-run against the deployment on 2026-11-19: 22/22 passed; `docs/evidence/agent-games-scenarios.json` is now the production run.
+- [x] `DONE` — CI workflow triggers on the branches this repository actually receives (`main`, `repo-analysis`, `agentgames/runproof`).
 
 ## 3. Wildcard — submission material
 

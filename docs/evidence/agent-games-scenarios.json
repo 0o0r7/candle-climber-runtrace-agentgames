@@ -1,7 +1,7 @@
 {
   "suite": "agent-games-scenarios/v1",
-  "generatedAt": "2026-11-19T10:41:50.261Z",
-  "baseUrl": "http://127.0.0.1:3000",
+  "generatedAt": "2026-11-19T12:52:50.813Z",
+  "baseUrl": "https://candle-climber-runtrace.vercel.app",
   "protocol": {
     "task": "runproof.verify.v1",
     "signatureProfile": "hmac-sha256/raw-body/utf8-key/lowercase-hex (local implemented choice, not a confirmed platform contract)",
@@ -18,129 +18,83 @@
     "terrain": {
       "seed": {
         "date": "2026-11-19",
-        "symbol": "BTCUSDT",
+        "symbol": "XRPUSDT",
         "interval": "1w",
         "source": "binance"
       },
       "candles": 219,
       "runTokenPrefix": "eyJzeW1ib2wi",
-      "candlesHash": "f4ace6ddd66b024ee2651cdf350f792c3455931adbab342080cd77c1c9c9901b"
+      "candlesHash": "6fdc298e3eec20b5953fac6620a7dd3ca5083903c94c6c51724db3848dd7f521"
     },
     "agentRun": {
       "profile": "wickcop",
       "died": true,
-      "ticks": 498,
-      "inputs": 10,
+      "ticks": 216,
+      "inputs": 2,
       "claims": {
-        "score": 195,
-        "candlesPassed": 14,
+        "score": 105,
+        "candlesPassed": 7,
         "bestStreak": 3,
         "deathCause": "crumbled",
         "jumpTicks": [
-          26,
-          106,
-          188,
-          265,
-          309,
-          398,
-          432
+          20,
+          105
         ],
         "landTicks": [
           18,
-          105,
-          185,
-          262,
-          294,
-          394,
-          429,
-          465
+          99,
+          182
         ],
         "scoreEvents": [
           {
-            "tick": 24,
+            "tick": 19,
             "score": 15,
             "combo": 1,
             "candlesPassed": 1
           },
           {
-            "tick": 62,
-            "score": 25,
-            "combo": 0,
+            "tick": 51,
+            "score": 35,
+            "combo": 2,
             "candlesPassed": 2
           },
           {
-            "tick": 100,
-            "score": 35,
-            "combo": 0,
+            "tick": 82,
+            "score": 60,
+            "combo": 3,
             "candlesPassed": 3
           },
           {
-            "tick": 137,
-            "score": 50,
-            "combo": 1,
+            "tick": 113,
+            "score": 70,
+            "combo": 0,
             "candlesPassed": 4
           },
           {
-            "tick": 174,
-            "score": 70,
-            "combo": 2,
+            "tick": 144,
+            "score": 85,
+            "combo": 1,
             "candlesPassed": 5
           },
           {
-            "tick": 210,
-            "score": 80,
+            "tick": 174,
+            "score": 95,
             "combo": 0,
             "candlesPassed": 6
           },
           {
-            "tick": 237,
-            "score": 95,
-            "combo": 1,
+            "tick": 197,
+            "score": 105,
+            "combo": 0,
             "candlesPassed": 7
-          },
-          {
-            "tick": 273,
-            "score": 115,
-            "combo": 2,
-            "candlesPassed": 8
-          },
-          {
-            "tick": 308,
-            "score": 140,
-            "combo": 3,
-            "candlesPassed": 9
-          },
-          {
-            "tick": 377,
-            "score": 150,
-            "combo": 0,
-            "candlesPassed": 11
-          },
-          {
-            "tick": 412,
-            "score": 165,
-            "combo": 1,
-            "candlesPassed": 12
-          },
-          {
-            "tick": 445,
-            "score": 185,
-            "combo": 2,
-            "candlesPassed": 13
-          },
-          {
-            "tick": 479,
-            "score": 195,
-            "combo": 0,
-            "candlesPassed": 14
           }
         ]
       },
-      "traceHash": "6cf313e9f36da5be0d6a851272fa3b65a8ace91a1be55e62f1b06c449b79edbf"
+      "traceHash": "e60f254b7529faf72fa95ce5fc78a659a225a5f0e9ea4aaf3cddb70b4b4a66d5"
     },
     "receipt": {
-      "id": "d46edba9-9810-47d3-affe-5b053688096d",
-      "url": "http://127.0.0.1:3000/runproof/r/d46edba9-9810-47d3-affe-5b053688096d",
+      "id": "ea11041e-611a-4a0a-be81-d2d0fc5d2ae3",
+      "url": "https://candle-climber-runtrace.vercel.app/runproof/r/ea11041e-611a-4a0a-be81-d2d0fc5d2ae3",
       "decision": "ACCEPT"
     }
   },
@@ -149,20 +103,20 @@
       "id": "deployment.home",
       "title": "Home route serves the app",
       "status": "PASS",
-      "latencyMs": 41,
+      "latencyMs": 433,
       "detail": {
         "status": 200,
-        "bytes": 65140
+        "bytes": 71181
       }
     },
     {
       "id": "deployment.showcase",
       "title": "Showcase route serves the loop",
       "status": "PASS",
-      "latencyMs": 148,
+      "latencyMs": 195,
       "detail": {
         "status": 200,
-        "bytes": 40617
+        "bytes": 32108
       }
     },
     {
@@ -173,25 +127,25 @@
       "detail": {
         "seed": {
           "date": "2026-11-19",
-          "symbol": "BTCUSDT",
+          "symbol": "XRPUSDT",
           "interval": "1w",
           "source": "binance"
         },
         "candles": 219,
         "runTokenPrefix": "eyJzeW1ib2wi",
-        "candlesHash": "f4ace6ddd66b024ee2651cdf350f792c3455931adbab342080cd77c1c9c9901b"
+        "candlesHash": "6fdc298e3eec20b5953fac6620a7dd3ca5083903c94c6c51724db3848dd7f521"
       }
     },
     {
       "id": "agent.run",
       "title": "Automated player completes a run",
       "status": "PASS",
-      "latencyMs": 14,
+      "latencyMs": 9,
       "detail": {
-        "ticks": 498,
-        "inputs": 10,
-        "score": 195,
-        "candlesPassed": 14,
+        "ticks": 216,
+        "inputs": 2,
+        "score": 105,
+        "candlesPassed": 7,
         "deathCause": "crumbled"
       }
     },
@@ -199,121 +153,75 @@
       "id": "verify.accept",
       "title": "Verifier accepts the run",
       "status": "PASS",
-      "latencyMs": 52,
+      "latencyMs": 196,
       "detail": {
         "decision": "ACCEPT",
         "policy": "runproof/deterministic-replay/v1",
         "replay": {
-          "ticks": 498,
-          "score": 195,
-          "candlesPassed": 14,
+          "ticks": 216,
+          "score": 105,
+          "candlesPassed": 7,
           "bestStreak": 3,
           "deathCause": "crumbled",
           "jumpTicks": [
-            26,
-            106,
-            188,
-            265,
-            309,
-            398,
-            432
+            20,
+            105
           ],
           "landTicks": [
             18,
-            105,
-            185,
-            262,
-            294,
-            394,
-            429,
-            465
+            99,
+            182
           ],
           "scoreEvents": [
             {
-              "tick": 24,
+              "tick": 19,
               "score": 15,
               "combo": 1,
               "candlesPassed": 1
             },
             {
-              "tick": 62,
-              "score": 25,
-              "combo": 0,
+              "tick": 51,
+              "score": 35,
+              "combo": 2,
               "candlesPassed": 2
             },
             {
-              "tick": 100,
-              "score": 35,
-              "combo": 0,
+              "tick": 82,
+              "score": 60,
+              "combo": 3,
               "candlesPassed": 3
             },
             {
-              "tick": 137,
-              "score": 50,
-              "combo": 1,
+              "tick": 113,
+              "score": 70,
+              "combo": 0,
               "candlesPassed": 4
             },
             {
-              "tick": 174,
-              "score": 70,
-              "combo": 2,
+              "tick": 144,
+              "score": 85,
+              "combo": 1,
               "candlesPassed": 5
             },
             {
-              "tick": 210,
-              "score": 80,
+              "tick": 174,
+              "score": 95,
               "combo": 0,
               "candlesPassed": 6
             },
             {
-              "tick": 237,
-              "score": 95,
-              "combo": 1,
+              "tick": 197,
+              "score": 105,
+              "combo": 0,
               "candlesPassed": 7
-            },
-            {
-              "tick": 273,
-              "score": 115,
-              "combo": 2,
-              "candlesPassed": 8
-            },
-            {
-              "tick": 308,
-              "score": 140,
-              "combo": 3,
-              "candlesPassed": 9
-            },
-            {
-              "tick": 377,
-              "score": 150,
-              "combo": 0,
-              "candlesPassed": 11
-            },
-            {
-              "tick": 412,
-              "score": 165,
-              "combo": 1,
-              "candlesPassed": 12
-            },
-            {
-              "tick": 445,
-              "score": 185,
-              "combo": 2,
-              "candlesPassed": 13
-            },
-            {
-              "tick": 479,
-              "score": 195,
-              "combo": 0,
-              "candlesPassed": 14
             }
           ]
         },
         "evidence": [
-          "Replay completed: 498 fixed ticks at 60 Hz.",
-          "Claims match replay: score 195, 14 candles passed, best streak 3.",
-          "Checked 10 input events against 219 supplied terrain candles.",
-          "Terrain matches the server-signed market level: BTCUSDT 2026-11-19 · 219 closed 1w candles."
+          "Replay completed: 216 fixed ticks at 60 Hz.",
+          "Claims match replay: score 105, 7 candles passed, best streak 3.",
+          "Checked 2 input events against 219 supplied terrain candles.",
+          "Terrain matches the server-signed market level: XRPUSDT 2026-11-19 · 219 closed 1w candles."
         ]
       }
     },
@@ -321,20 +229,20 @@
       "id": "verify.tamper",
       "title": "Verifier flags a tampered run",
       "status": "PASS",
-      "latencyMs": 87,
+      "latencyMs": 263,
       "detail": {
         "decision": "FLAG",
-        "reason": "Policy flagged the trace: Claimed score 196 does not match replayed score 195."
+        "reason": "Policy flagged the trace: Claimed score 106 does not match replayed score 105."
       }
     },
     {
       "id": "receipt.issue",
       "title": "Receipt is issued for the attested run",
       "status": "PASS",
-      "latencyMs": 114,
+      "latencyMs": 1370,
       "detail": {
-        "id": "d46edba9-9810-47d3-affe-5b053688096d",
-        "url": "http://127.0.0.1:3000/runproof/r/d46edba9-9810-47d3-affe-5b053688096d",
+        "id": "ea11041e-611a-4a0a-be81-d2d0fc5d2ae3",
+        "url": "https://candle-climber-runtrace.vercel.app/runproof/r/ea11041e-611a-4a0a-be81-d2d0fc5d2ae3",
         "decision": "ACCEPT"
       }
     },
@@ -342,12 +250,12 @@
       "id": "receipt.read",
       "title": "Stored receipt re-verifies",
       "status": "PASS",
-      "latencyMs": 167,
+      "latencyMs": 472,
       "detail": {
-        "id": "d46edba9-9810-47d3-affe-5b053688096d",
+        "id": "ea11041e-611a-4a0a-be81-d2d0fc5d2ae3",
         "decision": "ACCEPT",
         "terrainAttested": true,
-        "traceHash": "6cf313e9f36da5be0d6a851272fa3b65a8ace91a1be55e62f1b06c449b79edbf",
+        "traceHash": "e60f254b7529faf72fa95ce5fc78a659a225a5f0e9ea4aaf3cddb70b4b4a66d5",
         "reverified": "ACCEPT"
       }
     },
@@ -355,7 +263,7 @@
       "id": "receipt.unattested",
       "title": "Receipt endpoint refuses unattested terrain",
       "status": "PASS",
-      "latencyMs": 64,
+      "latencyMs": 207,
       "detail": {
         "status": 422
       }
@@ -364,7 +272,7 @@
       "id": "protocol.preflight",
       "title": "Signed preflight handshake",
       "status": "PASS",
-      "latencyMs": 78,
+      "latencyMs": 150,
       "detail": {
         "status": 200,
         "body": {
@@ -378,7 +286,7 @@
       "id": "protocol.task",
       "title": "Signed verification task",
       "status": "PASS",
-      "latencyMs": 65,
+      "latencyMs": 158,
       "detail": {
         "status": 200,
         "decision": "ACCEPT",
@@ -389,7 +297,7 @@
       "id": "protocol.bad-signature",
       "title": "Unsigned task is rejected",
       "status": "PASS",
-      "latencyMs": 62,
+      "latencyMs": 179,
       "detail": {
         "status": 401
       }
@@ -398,7 +306,7 @@
       "id": "protocol.idempotency",
       "title": "Repeated task returns the same signed answer",
       "status": "PASS",
-      "latencyMs": 158,
+      "latencyMs": 509,
       "detail": {
         "identicalBody": true,
         "identicalSignature": true
@@ -408,7 +316,7 @@
       "id": "protocol.conflict",
       "title": "Reused task ID with a new body is refused",
       "status": "PASS",
-      "latencyMs": 131,
+      "latencyMs": 302,
       "detail": {
         "status": 409
       }
@@ -417,19 +325,19 @@
       "id": "verify.honest-loss",
       "title": "A lost run is ACCEPT, not FLAG",
       "status": "PASS",
-      "latencyMs": 66,
+      "latencyMs": 228,
       "detail": {
         "decision": "ACCEPT",
-        "score": 95,
+        "score": 105,
         "deathCause": "crumbled",
-        "ticks": 246
+        "ticks": 209
       }
     },
     {
       "id": "verify.loss-inflated",
       "title": "A lost run claiming points is flagged",
       "status": "PASS",
-      "latencyMs": 71,
+      "latencyMs": 217,
       "detail": {
         "decision": "FLAG",
         "codes": [
@@ -441,7 +349,7 @@
       "id": "verify.after-death",
       "title": "A trace that keeps going after death is flagged",
       "status": "PASS",
-      "latencyMs": 70,
+      "latencyMs": 220,
       "detail": {
         "decision": "FLAG",
         "codes": [
@@ -453,7 +361,7 @@
       "id": "verify.terrain-tamper",
       "title": "Hand-edited candles break the signed terrain",
       "status": "PASS",
-      "latencyMs": 69,
+      "latencyMs": 207,
       "detail": {
         "decision": "FLAG",
         "codes": [
@@ -465,10 +373,10 @@
       "id": "verify.mutation-swap",
       "title": "A wrong daily mutation is flagged",
       "status": "PASS",
-      "latencyMs": 74,
+      "latencyMs": 166,
       "detail": {
-        "claimed": "lowgrav",
-        "expected": "clean",
+        "claimed": "clean",
+        "expected": "rush",
         "codes": [
           "mutation_mismatch"
         ]
@@ -478,9 +386,9 @@
       "id": "verify.foreign-token",
       "title": "A run token for another symbol is refused",
       "status": "PASS",
-      "latencyMs": 167,
+      "latencyMs": 1234,
       "detail": {
-        "borrowedFrom": "ETHUSDT",
+        "borrowedFrom": "BTCUSDT",
         "decision": "FLAG",
         "codes": [
           "run_token_seed_mismatch"
@@ -491,7 +399,7 @@
       "id": "verify.oversized",
       "title": "An oversized body is refused before replay",
       "status": "PASS",
-      "latencyMs": 75,
+      "latencyMs": 952,
       "detail": {
         "status": 413
       }
@@ -500,7 +408,7 @@
       "id": "receipt.invalid-json",
       "title": "Malformed JSON is a 400, not a crash",
       "status": "PASS",
-      "latencyMs": 81,
+      "latencyMs": 148,
       "detail": {
         "status": 400
       }
