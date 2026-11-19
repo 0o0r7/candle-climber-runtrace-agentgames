@@ -68,8 +68,9 @@ bun scripts/agent-games-scenarios.ts
 BASE_URL=https://candle-climber-runtrace.vercel.app bun scripts/agent-games-scenarios.ts
 ```
 
-The latest local run passed **14 / 14** scenarios and wrote
-[../evidence/agent-games-scenarios.json](../evidence/agent-games-scenarios.json):
+The suite is committed in this repository. Its latest recorded execution passed
+**22 / 22** scenarios against the production deployment on 2026-11-19 and is
+stored in [../evidence/agent-games-scenarios.json](../evidence/agent-games-scenarios.json):
 the signed terrain's seed and hash, the recorded run's claims, the issued
 receipt, and a verdict with latency for each scenario.
 

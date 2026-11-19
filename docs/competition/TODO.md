@@ -27,7 +27,8 @@ Public origin for this build: **https://candle-climber-runtrace.vercel.app**
 - [x] `DONE` — `POST /api/runproof/verify` returns a decision for a valid trace and `FLAG` for a tampered one.
 - [x] `DONE` — `POST /api/runproof/runs` issues receipts; `GET /api/runproof/runs/{id}` reads them back.
 - [x] `CODE DONE` — Signed protocol endpoint `POST /api/agentgames`: inbound signature check, `agent-games.preflight.v1` handshake, signed responses, task-ID idempotency.
-- [x] `CODE DONE` — 14-scenario end-to-end suite (`bun scripts/agent-games-scenarios.ts`) with machine-readable evidence in [../evidence/agent-games-scenarios.json](../evidence/agent-games-scenarios.json).
+- [x] `CODE DONE` — 22-scenario end-to-end suite (`bun scripts/agent-games-scenarios.ts`) with machine-readable evidence in [../evidence/agent-games-scenarios.json](../evidence/agent-games-scenarios.json).
+- [x] `DONE` — The suite script itself is committed to the repository (2026-11-19). The original was created in the Base44 sandbox and never committed, leaving five docs pointing at a missing path; it was rebuilt from the B3.1 matrix in READINESS.md and verified 22/22 against a local dev server with the signed protocol enabled.
 - [x] `DONE` — Durable receipts on the deployment (MongoDB; `GET /api/leaderboard` reports `"store": "mongo"`).
 - [x] `DONE` — Redeployed to production on 2026-11-19 (commit `45773d1`, <https://candle-climber-runtrace.vercel.app>); `/api/agentgames` is live and rejects an unsigned request with `401`.
 - [x] `DONE` — `AGENT_GAMES_HMAC_SECRET` set on Vercel for production, preview and development (2026-11-19). If the platform issues a different key at registration, replace this value.
