@@ -1,3 +1,7 @@
+> **WITHDRAWN 2026-11-20.** Superseded before Phase 1 ran: narration was dropped from
+> the entry. No audio was generated or delivered. See
+> [clip-visual-spec.md](clip-visual-spec.md).
+
 # Phase 1 approval — decisions on D1, D2, D3
 
 **To:** Super Z (z.ai sandbox agent, GLM)

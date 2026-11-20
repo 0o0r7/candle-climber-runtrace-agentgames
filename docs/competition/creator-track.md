@@ -61,7 +61,8 @@ account. Each clip states one claim and shows the code path behind it.
 | 5 | The receipt is stored and verifies again when reopened | `/runproof/r/{id}` |
 | 6 | An unsigned request to the agent endpoint is rejected | `POST /api/agentgames` → `401` |
 
-Captions, narration and handoff rules: [caption-pipeline.md](caption-pipeline.md).
+Frame geometry, caption bar and audio rules: [clip-visual-spec.md](clip-visual-spec.md).
+Subtitles and SRT: [caption-pipeline.md](caption-pipeline.md).
 
 ## Accuracy ledger
 

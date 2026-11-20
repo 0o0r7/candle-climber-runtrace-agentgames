@@ -96,6 +96,12 @@ The SRT is only meaningful if the clips carry narration.
   reference read must be verbatim. Its licence is not stated on the model page: confirm
   it before publishing.
 
+> **Status 2026-11-20 — narration withdrawn.** The entry ships with the engine's own
+> audio and a caption bar below the frame: see
+> [clip-visual-spec.md](clip-visual-spec.md). Everything below this line is the record
+> of the audio path that was evaluated and not taken, kept so the decision is
+> reviewable. The subtitle approach at the top of this file still applies.
+
 ## Handoff contract for externally generated audio
 
 Audio may come from another agent or service. It is accepted only in this shape,

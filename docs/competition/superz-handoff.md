@@ -1,3 +1,7 @@
+> **WITHDRAWN 2026-11-20.** Narration was dropped from the entry; the clips carry the
+> engine's own audio and a caption bar. Kept as a record of the evaluated path. See
+> [clip-visual-spec.md](clip-visual-spec.md).
+
 # Handoff request — narration for six short clips
 
 **To:** Super Z (coding agent, Base 1, Base44.com)
