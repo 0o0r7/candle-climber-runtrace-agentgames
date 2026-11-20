@@ -136,31 +136,42 @@ the clip shows, not what it argues.
 **clip 01 — ticks**
 
 ```text
-RunTrace showcase page in dark console styling. A top strip reads "TAKE · AGENT RECORDING REAL INPUT AT 60 HZ" beside a live counter reading SCORE 130, CANDLES 10, TICK 368. Below it the game canvas shows a candle chart with a small block character mid-jump above orange and green platforms, and a progress bar along the bottom. A caption bar under the frame reads "Real input from a deterministic bot."
+RunTrace showcase page in dark console styling. A top strip reads "TAKE · AGENT RECORDING REAL INPUT AT 60 HZ" beside a live counter tracking SCORE, CANDLES and TICK as the take runs. Below it the game canvas shows a candle chart with a small block character mid-jump above orange and green platforms, and a progress bar along the bottom. A caption bar under the frame reads "Real input from a deterministic bot."
 ```
 
 **clip 02 — signed terrain**
 
 ```text
-Split view of the same page. Left: the game canvas with the agent mid-run on candle-chart platforms. Right: two console rows. MARKET TERRAIN is tagged SIGNED and lists DOGEUSDT, 2026-11-20, 1w, 219 closed candles, binance, with a run token beginning eyJzeW1ib2wiOiJET0. RECORDER is tagged 60 HZ and reports runproof/v1, cc-fixed-tick-input/v1, 2697 fixed ticks and 51 input events. The caption bar reads "The level is signed: an HMAC run token."
+Split view of the same page. Left: the game canvas with the agent mid-run on candle-chart platforms. Right: two console rows. MARKET TERRAIN is tagged SIGNED and lists ETHUSDT, 2026-11-20, 1w, 219 closed candles, binance, with a run token beginning eyJzeW1ib2wiOiJFVE. RECORDER is tagged 60 HZ and reports runproof/v1, cc-fixed-tick-input/v1, 903 fixed ticks and 18 input events. The caption bar reads "The level is signed: an HMAC run token."
 ```
 
 **clip 03 — replay**
 
 ```text
-Split view while a fresh engine replays the recorded trace. Right column: SERVER REPLAY tagged ACCEPT, with "Trace claims match deterministic replay under this local policy", the replay length in fixed ticks, the matched totals (score 1285, 102 candles passed, best streak 6), the input-event and candle counts, and the policy id runproof/deterministic-replay/v1. Caption bar: "A fresh engine replays the trace."
+Split view while a fresh engine replays the recorded trace. Right column: SERVER REPLAY tagged ACCEPT, with "Trace claims match deterministic replay under this local policy", 903 fixed ticks at 60 Hz, the matched totals (score 330, 25 candles passed, best streak 4), 18 input events checked against 219 terrain candles, the line "Terrain matches the server-signed market level: ETHUSDT 2026-11-20 · 219 closed 1w candles", and the policy id runproof/deterministic-replay/v1. Caption bar: "A fresh engine replays the trace."
 ```
 
 **clip 04 — flag**
 
 ```text
-Console panel centred in the frame. SERVER REPLAY is tagged ACCEPT and lists the replay evidence. Below it, TAMPER CHECK (+1 SCORE) is tagged FLAG and reads: score_mismatch: Claimed score 1286 does not match replayed score 1285. Caption bar: "Add one point to the claim."
+Full-width console panel in the frame. SERVER REPLAY is tagged ACCEPT and lists the replay evidence (903 fixed ticks at 60 Hz; score 330, 25 candles passed, best streak 4; terrain ETHUSDT 2026-11-20). Below it, TAMPER CHECK (+1 SCORE) is tagged FLAG and reads: score_mismatch: Claimed score 331 does not match replayed score 330. Caption bar: "Add one point to the claim."
 ```
 
 **clip 05 — receipt**
 
+> **Defect — clip 05 is not postable in its current master (2026-11-20, fourth pass).**
+> The re-check block on screen reads `FLAG · DIFFERS from the stored verdict` /
+> `invalid_run_token: The attached run token is not a valid server signature`, while
+> the caption says "same trace, same totals". The receipt it shows
+> (`5545fa55-d4c2-4c19-829c-39532469f232`) was written by the local dev server and
+> signed with the dev secret: re-posting its stored trace returns `ACCEPT` on
+> `localhost:3000` and `FLAG` / `invalid_run_token` on
+> `candle-climber-runtrace.vercel.app`. Re-render the clip against the deployment with
+> a receipt that verifies there, then replace the alt text below with the `MATCH`
+> state.
+
 ```text
-Console panel centred in the frame. SHAREABLE RECEIPT is tagged EXISTING (the demo reuses the day's receipt) and links to /runproof/r/ea717213-7750-41f5-a003-6993a8eedbad. RE-VERIFY STORED TRACE is tagged MATCH and reads: the receipt's stored trace replays to ACCEPT with the same totals. Caption bar: "The receipt stores the trace itself."
+RunTrace receipt page in the app's white certificate layout on a dark background. TERRAIN AND IDENTITY lists market-binance · 219 candles, provenance "server-signed run token", trace hash 842cdc401918db84fb745c97a2b6cb524ea028ec092fc44cf032514641150433 and receipt id 5545fa55-d4c2-4c19-829c-39532469f232. EVIDENCE reads: replay completed 903 fixed ticks at 60 Hz; score 330, 25 candles passed, best streak 4; terrain ETHUSDT 2026-11-20 · 219 closed 1w candles. The RE-CHECK THIS RECEIPT block below it is tagged FLAG · DIFFERS from the stored verdict and carries invalid_run_token: The attached run token is not a valid server signature. Caption bar: "The receipt stores the trace itself."
 ```
 
 **clip 06 — endpoint**
