@@ -47,13 +47,21 @@ Read the contract: repository `docs/runproof/`
 
 Entry for `#AgentGames`. Tagging `@ZKVProtocol`.
 
-## Video outline (alternative, 60–90 s)
+## Clip plan (one clip per claim)
 
-1. Open the game, play ten seconds, show the jump.
-2. Open `/runproof`, run the six-case suite, show the verdicts and evidence.
-3. Break a trace on purpose — alter the claimed score — show `FLAG`.
-4. Say what it does not prove, on screen, in one sentence.
-5. Close on the endpoint URL and the repository link.
+Six clips, ≤ 30 s each, inside the 140 s / 512 MB ceiling of a non-Premium
+account. Each clip states one claim and shows the code path behind it.
+
+| Clip | Claim on screen | Evidence in the product |
+| --- | --- | --- |
+| 1 | Input is recorded at the 60 Hz tick boundary, not at frame time | `FixedTickInputRecorder` |
+| 2 | The terrain a run was played on is server-signed | `GET /api/candles` → run token |
+| 3 | A fresh engine instance replays the trace and returns `ACCEPT` | `POST /api/runproof/verify` |
+| 4 | A tampered score returns `FLAG`, with a reason | tamper control on `/runproof` |
+| 5 | The receipt is stored and verifies again when reopened | `/runproof/r/{id}` |
+| 6 | An unsigned request to the agent endpoint is rejected | `POST /api/agentgames` → `401` |
+
+Captions, narration and handoff rules: [caption-pipeline.md](caption-pipeline.md).
 
 ## Accuracy ledger
 

@@ -52,7 +52,9 @@ The official page judges four things. The Judge scores each 1–5 and requires
 | 3 Claim & Authenticity | — | — | `APPROVE` |
 | 4 zkVerify Protocol | **VETO**: "terrain and inputs are caller-supplied and unauthenticated" | Terrain *is* server-signed — `src/lib/run-token.ts` issues the HMAC, `src/game/runproof/attest.ts` recomputes the candle fingerprint (mandatory for receipts), `src/app/api/leaderboard/route.ts` returns `403` on an invalid token. Only the **inputs** are unattested. Sentence rewritten; ledger rows added | `APPROVE` |
 | 4 zkVerify Protocol | **VETO**: "Built … by zkVerify" implies zkVerify authored the build | Rewritten to "Entry for `#AgentGames`. Tagging `@ZKVProtocol`." | `APPROVE` |
-| 5 Compliance | Video outline still says 60–90 s while the clip plan targets 6 × ≤ 30 s — reconcile before recording | Open: outline to be replaced by the clip plan when recording starts | `OPEN` |
+| 5 Compliance | Video outline said 60–90 s while the clip plan targets 6 × ≤ 30 s | The 60–90 s outline was replaced by the six-clip plan in `creator-track.md` on 2026-11-20 | `APPROVE` |
 | 6 Judge | — | Not yet convened; requires the produced media | `PENDING` |
 
-**Gate status: not passed.** One lens open, Judge pending, media not produced.
+**Gate status: lenses 1–5 `APPROVE`.** Judge `PENDING` until the media exists.
+Narration is approved **only** in the per-cue form described in
+[caption-pipeline.md](caption-pipeline.md#handoff-contract-for-externally-generated-audio).
