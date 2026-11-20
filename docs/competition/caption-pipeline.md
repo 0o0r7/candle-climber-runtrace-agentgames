@@ -130,3 +130,27 @@ MP4 handed over already muxed has no check either.
 burned-in captions and its SRT track and no audio at all. Narration is an enhancement
 to a finished entry, never a dependency of it — which is why an unresolved licence on
 the synthesis engine cannot block publication.
+
+## Engine choice, and when to change it
+
+| Engine | Cloning | Native output | Licence | Cost to us |
+| --- | --- | --- | --- | --- |
+| Super Z sandbox TTS (`jam` preset) | no | 24 kHz mono `pcm_s16le` | **unknown** | zero — already wired |
+| Manus + ElevenLabs connector | yes, from a few seconds | 44.1 kHz PCM or mp3 | documented per plan, needs a paid account | a second agent, a second provenance chain |
+| Local model | yes | 44.1 kHz+ | model-dependent | rejected — no GPU in this sandbox |
+
+**Rule: the engine is chosen once, before the batch, never per clip.** Two engines
+across six clips means two narrators, and a reviewer notices that in the first ten
+seconds.
+
+**Current decision: pilot on the preset voice.** A preset voice that is clear, correctly
+accented and consistent beats a clone that arrives with an unknown licence. Switch only
+on evidence — the pilot sounds wrong for technical English, or the voice has to be the
+author's own — not in anticipation of a problem that the pilot can settle in one file.
+
+The reason this stays cheap either way: the manifest contract above is engine-agnostic.
+Only the `engine` block changes. A pivot costs one regenerated batch, not a redesign.
+
+If the pivot happens, two things change with it: the disclosure must name the provider
+and state that the voice is a clone of the author, and the reference sample is biometric
+data that never enters the repository and is never uploaded anywhere public.
