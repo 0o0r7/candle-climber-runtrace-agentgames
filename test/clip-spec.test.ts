@@ -91,6 +91,14 @@ describe("cue validation", () => {
     expect(many.some((p) => p.includes("lines"))).toBe(true);
   });
 
+  test("a cue that cannot fit the 80px bar is rejected", () => {
+    // One line at the shipped 42px size fits; a second line does not, and the
+    // renderer must never be the thing that discovers it.
+    expect(validateCues([cue({ text: "one line fits" })])).toEqual([]);
+    const two = validateCues([cue({ text: "one\ntwo" })]);
+    expect(two.some((p) => p.includes("do not fit"))).toBe(true);
+  });
+
   test("overlapping cues in a clip are rejected", () => {
     const problems = validateCues([
       cue({ index: 1, tickIn: 100, tickOut: 300 }),

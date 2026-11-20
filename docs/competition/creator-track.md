@@ -16,6 +16,11 @@ Rejected alternatives and why:
 
 ## Thread draft
 
+> **Superseded 2026-11-20.** The shipped text is [thread-final.md](thread-final.md):
+> thirteen posts, each measured against the 280-character limit, with the six clips
+> mapped to their claims and the alt text written. The draft below is kept as the
+> record of how the argument was built.
+
 **1/** A game bug report says "the game ate my jump". A score claim says "12,400". A balance patch says "nothing changed". All three are claims about a run nobody can inspect afterwards.
 
 We built an agent that plays the game and leaves a replayable trace instead. `#AgentGames`
@@ -52,14 +57,14 @@ Entry for `#AgentGames`. Tagging `@ZKVProtocol`.
 Six clips, ≤ 30 s each, inside the 140 s / 512 MB ceiling of a non-Premium
 account. Each clip states one claim and shows the code path behind it.
 
-| Clip | Claim on screen | Evidence in the product |
-| --- | --- | --- |
-| 1 | Input is recorded at the 60 Hz tick boundary, not at frame time | `FixedTickInputRecorder` |
-| 2 | The terrain a run was played on is server-signed | `GET /api/candles` → run token |
-| 3 | A fresh engine instance replays the trace and returns `ACCEPT` | `POST /api/runproof/verify` |
-| 4 | A tampered score returns `FLAG`, with a reason | tamper control on `/runproof` |
-| 5 | The receipt is stored and verifies again when reopened | `/runproof/r/{id}` |
-| 6 | An unsigned request to the agent endpoint is rejected | `POST /api/agentgames` → `401` |
+| Clip | Claim on screen | Evidence in the product | Shipped file |
+| --- | --- | --- | --- |
+| 1 | Input is recorded at the 60 Hz tick boundary, not at frame time | `FixedTickInputRecorder` | `media/clip-01-ticks.mp4` |
+| 2 | The terrain a run was played on is server-signed | `GET /api/candles` → run token | `media/clip-02-signed.mp4` |
+| 3 | A fresh engine instance replays the trace and returns `ACCEPT` | `POST /api/runproof/verify` | `media/clip-03-replay.mp4` |
+| 4 | A tampered score returns `FLAG`, with a reason | tamper control on `/runproof` | `media/clip-04-flag.mp4` |
+| 5 | The receipt is stored and verifies again when reopened | `/runproof/r/{id}` | `media/clip-05-receipt.mp4` |
+| 6 | An unsigned request to the agent endpoint is rejected | `POST /api/agentgames` → `401` | `media/clip-06-endpoint.mp4` |
 
 Frame geometry, caption bar and audio rules: [clip-visual-spec.md](clip-visual-spec.md).
 Subtitles and SRT: [caption-pipeline.md](caption-pipeline.md).

@@ -90,6 +90,10 @@ agent-ctx/
 
 # e2e gamer-bot artifacts
 e2e-artifacts/
+
+# Creator-track clip production workspace (raw captures, frames, renders).
+# Published clips live in docs/competition/media/.
+/.captures/
 .krea_creds
 .sentry_token
 

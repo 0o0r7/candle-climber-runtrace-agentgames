@@ -114,6 +114,11 @@ export function validateCues(cues: Cue[]): string[] {
         problems.push(`${at}: line is ${line.length} chars (max ${MAX_CHARS_PER_LINE})`);
       }
     }
+    if (lines.length > barLineBudget()) {
+      problems.push(
+        `${at}: ${lines.length} line(s) do not fit the ${BAR_H}px bar at ${ASS_STYLE.fontSize}px (max ${barLineBudget()})`,
+      );
+    }
 
     if (!/^\d{2}\/\d{2}$/.test(cue.label)) problems.push(`${at}: label "${cue.label}" is not NN/NN`);
 
@@ -157,16 +162,36 @@ export function validatePalette(palette: { bar: string; ink: string; accent: str
   return problems;
 }
 
-/** Bar typography, in real pixels because the ASS declares its own resolution. */
+/**
+ * Bar typography, in real pixels because the ASS declares its own resolution.
+ *
+ * 42 px is a legibility floor, not a taste: a 1280-wide clip shown on a ~390 px
+ * phone renders this at ~13 px. The bar is 80 px tall, so that size also means
+ * ONE line per cue — a second line does not fit and `validateCues` rejects it.
+ */
 export const ASS_STYLE = {
   // Must be the family the shipped font file actually declares — libass does not
   // fail loudly when it cannot resolve one, it silently draws nothing.
   fontName: "DejaVu Sans",
-  fontSize: 30,
+  fontSize: 42,
   marginL: 76,
   marginR: 24,
-  marginV: 30,
+  marginV: 12,
 } as const;
+
+/** Line box height as a multiple of the font size (libass uses the font's metrics). */
+export const ASS_LINE_HEIGHT = 1.15;
+
+/** Accent rule drawn along the bar's top edge; it eats into the text budget. */
+export const ACCENT_RULE_H = 3;
+
+/** Series label in the bar's left padding, in the accent colour. */
+export const LABEL_STYLE = { fontSize: 22, marginL: 24, marginV: 14 } as const;
+
+/** How many lines of the shipped type size actually fit inside the bar. */
+export function barLineBudget(): number {
+  return Math.floor((BAR_H - 2 * ASS_STYLE.marginV - ACCENT_RULE_H) / (ASS_STYLE.fontSize * ASS_LINE_HEIGHT));
+}
 
 /** ASS timecode `H:MM:SS.cc` — centiseconds, one decimal place fewer than SRT. */
 export function assTimestamp(tick: number): string {
@@ -202,17 +227,26 @@ export function toAss(cues: Cue[]): string {
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
     // Ink #F2F5F7 -> &H00F7F5F2 (ASS is AABBGGRR), alignment 2 = bottom centre.
     `Style: Bar,${ASS_STYLE.fontName},${ASS_STYLE.fontSize},&H00F7F5F2,&H00F7F5F2,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,2,${ASS_STYLE.marginL},${ASS_STYLE.marginR},${ASS_STYLE.marginV},1`,
+    // Accent #F0B429 -> &H0029B4F0, alignment 1 = bottom left, bold, in the left padding.
+    `Style: Label,${ASS_STYLE.fontName},${LABEL_STYLE.fontSize},&H0029B4F0,&H0029B4F0,&H00000000,&H00000000,1,0,0,0,100,100,0,0,1,0,0,1,${LABEL_STYLE.marginL},${ASS_STYLE.marginR},${LABEL_STYLE.marginV},1`,
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
   ];
 
-  const events = [...cues]
-    .sort((a, b) => a.tickIn - b.tickIn)
-    .map((cue) => {
-      const text = cue.text.replace(/\n/g, "\\N");
-      return `Dialogue: 0,${assTimestamp(cue.tickIn)},${assTimestamp(cue.tickOut)},Bar,,0,0,0,,${text}`;
-    });
+  const sorted = [...cues].sort((a, b) => a.tickIn - b.tickIn);
+  const events: string[] = sorted.map((cue) => {
+    const text = cue.text.replace(/\n/g, "\\N");
+    return `Dialogue: 0,${assTimestamp(cue.tickIn)},${assTimestamp(cue.tickOut)},Bar,,0,0,0,,${text}`;
+  });
+
+  // Series label in the bar's left padding for the whole clip, so two clips from
+  // the thread read as one series before a single word is read.
+  const label = sorted[0]?.label ?? "";
+  if (label) {
+    const lastTick = sorted.reduce((max, cue) => Math.max(max, cue.tickOut), 0);
+    events.push(`Dialogue: 1,${assTimestamp(0)},${assTimestamp(lastTick + TICK_HZ)},Label,,0,0,0,,${label}`);
+  }
 
   return `${[...header, ...events].join("\n")}\n`;
 }

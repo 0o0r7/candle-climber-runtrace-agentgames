@@ -58,3 +58,21 @@ The official page judges four things. The Judge scores each 1–5 and requires
 **Gate status: lenses 1–5 `APPROVE`.** Judge `PENDING` until the media exists.
 Narration is approved **only** in the per-cue form described in
 [caption-pipeline.md](caption-pipeline.md#handoff-contract-for-externally-generated-audio).
+
+### 2026-11-20 — produced media and final thread
+
+Material reviewed: six clips in `media/`, the thirteen-post thread in
+[thread-final.md](thread-final.md), and the alt text for each clip.
+
+| Lens | What it checked | Objection | Resolution | Verdict |
+| --- | --- | --- | --- | --- |
+| 1 X Distribution | Every post measured against 280 characters (13/13 pass); one clip per claim; alt text written for all six; captions burned in at 42 px, which a ~390 px phone renders at ~13 px | Post 12 carried no `#AgentGames` | Tag added; the tag rule now has no exceptions | `APPROVE` |
+| 2 Technical Article | Each claim has a reproduction a reader can run: `/runproof/showcase`, `/runproof/r/<id>`, `POST /api/runproof/verify`, `POST /api/agentgames`, and the repository docs the thread cites | — | — | `APPROVE` |
+| 3 Claim & Authenticity | Every caption reduces to a ledger row; the numbers on screen are the run's own; bar contrast passes the validator; the `401` in clip 06 is a live response from the public deployment | **Found in production**: the first cut of clip 05 showed a receipt written by the local dev server into the shared store, and that receipt re-verified as `FLAG` on the public deployment because the run token was signed with the dev secret | Clip 05 re-captured against the public deployment; the dev-signed record deleted from `candleclimber.runtrace_receipts`; the shipped receipt `ea717213-7750-41f5-a003-6993a8eedbad` re-verified `ACCEPT` by re-posting its stored trace | `APPROVE` |
+| 4 zkVerify Protocol | No sentence claims proof generation, a zkVerify submission, or zkVerify authorship; the product's own banner says "DETERMINISTIC REPLAY · NO ZK PROOF"; authorship is attributed to Super Z and Base44 BaseCode | — | — | `APPROVE` |
+| 5 Compliance | Deadline 2026-11-21 22:00 UTC; media 11.5–16 s per clip, 0.25–1.3 MB, well inside 140 s / 512 MB; captions burned in; alt text ready | The entry is **not filed**: publishing the thread and filing from `/dashboard/submissions` need the owner's account | Material is submission-ready; the two owner steps are listed in [TODO.md](TODO.md) | `APPROVE` (filing pending owner) |
+| 6 Judge | Four official axes, 1–5, no axis below 3, technical substance ≥ 4 | — | Technical substance **5** (fixed-tick recording, fresh-instance replay, signed terrain, a deterministic verifier with reasons, each demonstrated on screen); Clarity **4** (one claim per post, limits stated in the same breath); zkVerify relevance **3** (the build does not use the protocol; the thread claims only that replay consistency is its precondition); Originality **4** (the negative space, stated by the builder) | `APPROVE` |
+
+**Gate status: all six lenses `APPROVE` on the material.** Two steps remain and both
+need the owner's account: publish the thread from X, then file the link from
+`/dashboard/submissions`. Until the entry is filed, the submission is not complete.

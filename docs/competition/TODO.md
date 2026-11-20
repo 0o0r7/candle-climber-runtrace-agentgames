@@ -47,11 +47,21 @@ Public origin for this build: **https://candle-climber-runtrace.vercel.app**
 
 ## 4. Creator Track
 
-- [ ] `USER` — Pick the format (thread, video, article) — content plan is in [creator-track.md](creator-track.md).
-- [ ] `USER` — Approve the narrative and the mascot/visual package.
-- [ ] `OPEN` — Produce the content assets (screenshots, receipt link, scenario evidence).
-- [ ] `USER` — Publish with `#AgentGames` and tag `@ZKVProtocol` on X.
-- [ ] `USER` — Submit the link from the registered dashboard.
+- [x] `DONE` — Format chosen: one X thread, thirteen posts, six clips
+      ([thread-final.md](thread-final.md)).
+- [x] `DONE` — Narrative and limits approved by the review panel, with the four
+      judging axes scored ([review-panel.md](review-panel.md)).
+- [x] `DONE` — Content assets produced 2026-11-20: six clips in `media/` with their
+      SRT tracks, every claim traceable to a ledger row, every frame a capture of the
+      running product.
+- [x] `DONE` — Clips verified mechanically: constant 60 fps, 1280 × 800, caption
+      present at every cue midpoint and absent before the first one
+      ([video-production-standard.md](video-production-standard.md#7-production-record--2026-11-20-the-six-shipped-clips)).
+- [ ] `USER` — Publish the thread from the owner's X account, attaching the six clips
+      in the order in the thread file and pasting the alt text.
+- [ ] `USER` — File the published link from `/dashboard/submissions` before
+      **2026-11-21, 22:00 UTC**.
+- [ ] `OPEN` — Archive the published thread under `media/thread-archive/` once it is live.
 
 ## 5. Visual direction (UI/UX)
 

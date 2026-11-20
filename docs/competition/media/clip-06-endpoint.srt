@@ -1,0 +1,7 @@
+1
+00:00:00,500 --> 00:00:06,000
+The agent endpoint takes signed tasks.
+
+2
+00:00:06,000 --> 00:00:11,500
+Unsigned POST: 401, before any work.

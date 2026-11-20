@@ -105,3 +105,44 @@ The `web` image still has no ffmpeg; the renderer runs as its own container with
 font directory mounted. The font must be **mounted and referenced by a family name it
 actually declares** — the image ships no usable default font, and libass does not fail
 loudly when it cannot resolve one.
+
+
+## 7. Production record — 2026-11-20, the six shipped clips
+
+What was produced, and the one rule that changed because the capture path changed.
+
+**Source of the picture.** Every clip is a screen capture of the running product: the
+`/runproof/showcase` page for clips 01–05, and the real `POST /api/agentgames` response
+for clip 06. Five sessions were recorded (one per claim, because the proof panel holds
+its states only until the next take starts), each warmed up until the page had produced
+its own evidence, then staged and held for 15–16 s. Clip 05 was captured against the
+public deployment so the receipt it shows resolves for a reader.
+
+**The rule that changed.** Section 4 required `nb_read_frames == ticks`. That gate
+belongs to a tick-stepped render, where the renderer draws one frame per simulation
+tick. A screen capture is sampled from a live page instead, so the equivalent guarantee
+is:
+
+| Gate | How it was checked | Result |
+| --- | --- | --- |
+| Constant frame rate | `ffprobe r_frame_rate` | `60/1` on all six |
+| Frame count | `nb_read_frames` against `duration × 60` | 960/900/900/895/893/689 — each within one frame of its duration |
+| Geometry | `ffprobe width,height` | 1280 × 800 on all six |
+| Cue boundaries | derived from the capture script's own logged stage timestamps, never typed | recorded in `timings/clip-NN.json` |
+| Caption presence | frame at each cue midpoint, crop the bar body `y=726..796`, luma spread | 213–221 at every cue, **1** in the centre of the bar before the first cue |
+| Label presence | same crop, full width | ink present in the left padding from frame 0 |
+| Bar fit | row-by-row luma profile of `y=720..799` | ink stops at y=786, inside the bar, below the 3 px accent rule |
+
+The luma check is the one that catches a silent failure: a uniform crop means no text,
+whatever the renderer believed it drew. Measuring the centre of the bar separately from
+the whole bar is what separates "the cue is on screen" from "the series label is on
+screen".
+
+**Type.** The shipped bar is one line at 42 px, not two at 30 px: 42 px is the size that
+survives a phone at 1280 wide, and two lines of it do not fit an 80 px bar. The
+validator now enforces the fit (`barLineBudget()`), so a two-line cue is rejected before
+the renderer sees it.
+
+**Audio.** Silent, as section 3 allows. Playwright writes video-only files and the
+engine's `AudioContext` stays suspended without a user gesture, so a headless run
+records silence. No audio bed was invented to hide it.
