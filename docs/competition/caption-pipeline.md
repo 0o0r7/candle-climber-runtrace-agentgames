@@ -4,6 +4,11 @@ Six clips, ≤ 30 s each, recorded from the running app. Captions are **generate
 from the same timeline as the clip**, never typed per render, so a re-record can
 never drift out of sync.
 
+> **Audio in use (2026-11-20).** Not narration. Each clip carries a synthesised score
+> generated from the same cue file by `scripts/clip-audio.ts` — one accent per cue, no
+> voice. The narration path recorded below stays as the record of what was evaluated
+> and not taken; see [clip-visual-spec.md](clip-visual-spec.md#audio).
+
 ## Three layers, one source
 
 | Layer | What it carries | Why |

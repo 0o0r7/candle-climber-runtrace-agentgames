@@ -80,8 +80,9 @@ Nothing is published during steps 1–4. A verdict obtained after step 5 is wort
 | 6 Judge | — | Not yet convened; requires the produced media | `PENDING` |
 
 **Gate status: lenses 1–5 `APPROVE`.** Judge `PENDING` until the media exists.
-Narration is approved **only** in the per-cue form described in
-[caption-pipeline.md](caption-pipeline.md#handoff-contract-for-externally-generated-audio).
+Narration stays withdrawn. What ships instead is a synthesised score generated from
+each clip's own cue file — no voice, no sample library, no synthesis licence — and it
+is described as a score wherever it appears (see the second pass below).
 
 ### 2026-11-20 — produced media and final thread
 
@@ -103,3 +104,26 @@ on this exact material — `bun scripts/publish-gate.ts` must exit `0` — and o
 is the thread published unchanged, archived with its timestamp, and its link filed
 from `/dashboard/submissions`. Steps and owners: [TODO.md](TODO.md#4-creator-track).
 Until the entry is filed, the submission is not complete.
+
+### 2026-11-20 — second pass: owner review of the shipped clips (material v3)
+
+Trigger: the owner watched all six files and reported six defects — every clip silent;
+clip 01 losing the playfield on a drop; clips 02/03 panel text past the right edge;
+clip 04 with an empty top and the feel of a still image; clip 05 not using the
+product's own receipt page; clip 06 without audio. Fixes, causes and measurements are
+in [video-production-standard.md](video-production-standard.md) §8. The material
+changed, so every lens was re-run on the changed parts only.
+
+| Lens | What it checked | Objection | Resolution | Verdict |
+| --- | --- | --- | --- | --- |
+| 1 X Distribution | Durations now 7.3 s / 12.8 s / 14.8 s / 15.0 s / 16.0 s / 11.5 s; one claim per clip; captions and alt text unchanged; nothing exceeds 140 s | Clip 03 is now half the length of the others, which reads as an outlier in a series | The reason is on the record and stated in the thread: the replay *is* its evidence, and the showcase starts a new take the moment it ends. No padding was added to match | `APPROVE` |
+| 2 Technical Article | Reproduction for every change: `test/camera-framing.test.ts`, `scripts/clip-audio.ts`, and the capture/render commands recorded in §8 | — | — | `APPROVE` |
+| 3 Claim & Authenticity | The score is disclosed as a score in three places (visual spec, standard §8, review packet); the engine's own `sfx` is never claimed; clip 05 now shows the production receipt `5545fa55-d4c2-4c19-829c-39532469f232`, read back from `https://candle-climber-runtrace.vercel.app/api/runproof/runs/<id>` as `decision: "ACCEPT"`, `traceHash 842cdc40…` | The first cut of clip 05 in this pass was captured against the local dev server — the exact defect this lens caught in v2 | Re-captured against the public deployment; the receipt shown is the production record, and the clip shows its live re-check | `APPROVE` |
+| 4 zkVerify Protocol | No new sentence touches proof generation, submission, or authorship; the camera and audio changes add no protocol claim | — | — | `APPROVE` |
+| 5 Compliance | Media 0.79–1.74 MB, 7.3–16.0 s, captions burned in, SRT beside each file; deadline 2026-11-21 22:00 UTC still ahead | Filing still needs the owner's account | Listed in [TODO.md](TODO.md#4-creator-track) | `APPROVE` (filing pending owner) |
+| 6 Judge — **panel pre-score, not a verdict** | Four official axes on the new material | The v2 pre-score was taken on material that no longer exists | Unchanged: technical substance **5**, clarity **4**, zkVerify relevance **3**, originality **4** — the changes are presentation and framing, not new substance | `PRE-SCORE` |
+
+**Gate status: lenses 1–5 `APPROVE` on material v3; the judge verdict is `PENDING`
+and the v2 verdict — if one had been signed — is void, because the digest changed.**
+`bun scripts/publish-gate.ts` now exits `1` until a named judge signs the v3 digest, and
+that is the intended state: nothing is published on a superseded verdict.

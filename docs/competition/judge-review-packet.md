@@ -68,7 +68,7 @@ Any one of these is a `REJECT`, regardless of the axis scores:
 ## Checking it in ten minutes
 
 1. Read [thread-final.md](thread-final.md) top to bottom as a reader, not as an author. Note where you had to re-read a post.
-2. Watch the six clips in `media/`. Each is 15–16 s and silent by design; the caption bar carries the claim.
+2. Watch the six clips in `media/`. They run 7.3 s to 16 s (clip 03 is short because its replay is its evidence), each carries a synthesised score generated from its own cue timeline, and the caption bar carries the claim on its own. The score is music, not the engine's sound — [video-production-standard.md](video-production-standard.md) §8 says so in the same words.
 3. Spot-check three claims against the running product — `/runproof` (console and tamper control), `/runproof/showcase` (looped verified replay), `POST /api/agentgames` (must answer `401` unsigned).
 4. Open [review-panel.md](review-panel.md): five lens records with the evidence each checked, including two protocol vetoes that were raised and resolved.
 5. Score the four axes and write the verdict.

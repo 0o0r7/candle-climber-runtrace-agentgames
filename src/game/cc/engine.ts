@@ -45,6 +45,30 @@ export const CAM_MAX = 400; // was 470 — late-game still tense, no longer fran
 // always fits) — the frame can hold BOTH the player and the terrain.
 export const CAM_LERP = 4.2;         // the original single follow rate
 export const CAM_GROUND_STRIP = 24;  // takeoff platform keeps this strip visible at the frame bottom
+// CAMERA-FRAME v4 (owner report 2026-11-20, clip review): on a drop the follow
+// law pinned the frame to the takeoff platform, so the platform the player was
+// jumping toward sat below the frame edge — the run could not be read ahead.
+// The render camera now also pulls down far enough to hold the next solid
+// platform inside the frame, and never further than the player's own headroom.
+// `camY` is the RENDER camera only: the death law keeps using `deathY`, so a
+// recorded trace replays to exactly the same verdict as before.
+export const CAM_LANDING_MARGIN = 28; // landing platform stays this far inside the frame bottom
+export const CAM_TOP_MARGIN = 40;     // the player's head stays this far inside the frame top
+
+/** The shipped follow law — also what decides when a fall is a death. */
+export function cameraFollowTarget(py: number, lastGroundY: number): number {
+  return Math.max(py - VIEW_H * 0.52, lastGroundY - VIEW_H + CAM_GROUND_STRIP);
+}
+
+/**
+ * The render camera's target: the follow law, pulled down far enough to keep
+ * the platform ahead inside the frame, and never past the player's headroom.
+ */
+export function cameraFramedTarget(follow: number, py: number, landingY: number | null): number {
+  if (landingY === null) return follow;
+  const landingFloor = Math.min(landingY + CAM_LANDING_MARGIN - VIEW_H, py - CAM_TOP_MARGIN);
+  return Math.max(follow, landingFloor);
+}
 
 export type SfxName = "jump" | "land" | "crumble" | "milestone" | "victory";
 
@@ -76,6 +100,8 @@ export class Engine {
   rush = false;
   // camera / world
   camX = 0; camY = 0; speed = CAM_BASE;
+  /** The shipped follow law, unchanged: this is what decides when a fall is a death. */
+  deathY = 0;
   // CAMERA-FRAME fix: y of the last platform the player left the ground from.
   // The camera follow target never dips below the line that keeps a
   // CAM_GROUND_STRIP strip of this platform visible (soft Math.max guard —
@@ -111,6 +137,7 @@ export class Engine {
     const start = plats.find((p) => p.state === "solid") ?? plats[0];
     this.py = start.y - 140;
     this.camY = this.py - VIEW_H * 0.55;
+    this.deathY = this.camY;
     this.camX = start.x + PLATFORM_W / 2 - VIEW_W * PLAYER_X_FRAC;
     this.lastGroundY = start.y;
   }
@@ -308,8 +335,11 @@ export class Engine {
       this.cb.onSfx?.("jump");
     }
 
-    // death: fell below view
-    if (this.py > this.camY + VIEW_H + 80) {
+    // death: fell below view — measured against the follow law (`deathY`), never
+    // against the framed render camera, so the framing change cannot move the
+    // tick on which a run ends (and a recorded trace still replays to the same
+    // verdict).
+    if (this.py > this.deathY + VIEW_H + 80) {
       this.die(this.lastLandUp === false ? "crumbled" : "fell");
     }
 
@@ -318,13 +348,28 @@ export class Engine {
     // no velocity discontinuity): normal play tracks py - 0.52*VIEW_H exactly
     // like the shipped original; a very high arc eases the camera into the
     // static floor line, holding the takeoff strip visible without any snap.
-    const camFloor = this.lastGroundY - VIEW_H + CAM_GROUND_STRIP;
-    const desired = Math.max(this.py - VIEW_H * 0.52, camFloor);
-    this.camY += (desired - this.camY) * Math.min(1, dt * CAM_LERP);
+    const desired = cameraFollowTarget(this.py, this.lastGroundY);
+    this.deathY += (desired - this.deathY) * Math.min(1, dt * CAM_LERP);
+    if (this.deathY > 0) this.deathY = 0;
+
+    // CAMERA-FRAME v4 (render only): same chase, landing platform held in frame.
+    const landing = this.nextSolidAhead();
+    const framed = cameraFramedTarget(desired, this.py, landing ? landing.y : null);
+    this.camY += (framed - this.camY) * Math.min(1, dt * CAM_LERP);
     if (this.camY > 0) this.camY = 0;
     this.shake = Math.max(0, this.shake - dt * 30);
     this.stepParticles(dt);
     this.stepFloats(dt);
+  }
+
+  /** Nearest solid platform strictly ahead of the player's right edge. */
+  private nextSolidAhead(): Platform | null {
+    const edge = this.px + PLAYER_W;
+    for (const p of this.plats) {
+      if (p.state !== "solid" || p.w === 0) continue;
+      if (p.x + p.w > edge) return p;
+    }
+    return null;
   }
 
   private stepFloats(dt: number) {

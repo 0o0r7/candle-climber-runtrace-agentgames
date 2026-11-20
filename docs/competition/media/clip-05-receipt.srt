@@ -3,5 +3,5 @@
 The receipt stores the trace itself.
 
 2
-00:00:07,500 --> 00:00:14,500
+00:00:07,500 --> 00:00:12,333
 Reopen it: same trace, same totals.

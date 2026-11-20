@@ -56,8 +56,13 @@ ass=cues.ass:fontsdir=/w/fonts" \
 list the SRT is generated from. The SRT is still written, but it is shipped as a track,
 never burned: see the trap in §6.
 
-Audio is kept only if the capture actually carries it, in which case `-an` becomes
-`-c:a aac -b:a 160k -ar 48000`. A silent clip is acceptable; a fake audio bed is not.
+**Audio (revised 2026-11-20).** A capture never carries game audio: Playwright writes a
+video-only file and the engine's `AudioContext` stays suspended without a gesture. The
+track is therefore generated from the clip's own cue file by `scripts/clip-audio.ts` and
+muxed once, in the same encode: `-c:a aac -b:a 160k -ar 48000`. It is a score — pad,
+bass, pulse, one accent per cue — and it is described as a score everywhere it appears.
+It is never presented as a recording of the run, and no sample library or voice model
+enters the pipeline.
 
 ## 4. Acceptance gates
 
@@ -143,6 +148,32 @@ survives a phone at 1280 wide, and two lines of it do not fit an 80 px bar. The
 validator now enforces the fit (`barLineBudget()`), so a two-line cue is rejected before
 the renderer sees it.
 
-**Audio.** Silent, as section 3 allows. Playwright writes video-only files and the
-engine's `AudioContext` stays suspended without a user gesture, so a headless run
-records silence. No audio bed was invented to hide it.
+**Audio.** Silent in this first pass, as section 3 allowed at the time. The owner
+review below changed that rule; section 8 is the shipped state.
+
+## 8. Production record — 2026-11-20, second pass (owner review)
+
+The owner watched the six shipped files and reported six defects. Each one below is
+traced to its cause, the change that answers it, and the measurement that shows the
+change landed. Nothing here was re-decided on taste.
+
+| # | Reported | Cause | Change | Measured |
+| --- | --- | --- | --- | --- |
+| 1 | Every clip is silent | A capture is video-only: Playwright writes no audio track and the engine's `AudioContext` stays suspended headless | `scripts/clip-audio.ts` scores each clip from its own cue file, muxed in the same encode | all six carry `aac 48 kHz stereo 160 kb/s`; `volumedetect` mean −14.0 dB, max −3.1 dB |
+| 2 | Clip 01: on a big jump the playfield leaves the frame and the run cannot be read ahead | The follow law pins the frame to the *takeoff* platform, so the platform being jumped toward sat below the frame edge | render camera v4: the same chase, pulled down to hold the next solid platform, capped at the player's headroom. The death law keeps its own `deathY`, so a recorded trace still replays to the same verdict | on today's take, upcoming-platform samples outside the frame **135 → 0**, worst offset **532 → 454 px**; `deathTick 903 / score 330 / 25 candles / best streak 4` identical before and after; `test/camera-framing.test.ts` |
+| 3 | Clips 02/03: panel text runs past the right edge; type could be larger | The panel was laid out at `zoom: 1.25` on a 342 px box, so its content overflowed the frame | fixed geometry (no zoom), 17 px type, wrapping constrained to the box, rows typed in on their cue | panel sits inside x 848–1256 with nothing clipped; panel bright-pixel share rises on each cue boundary (2.14 % → 2.60 %, 1.99 % → 2.11 %) |
+| 4 | Clip 04: empty top, text pushed down, reads as a still image | The panel was vertically centred, and one state was held for the whole clip | rows spread top-to-bottom across the frame, each typed on its cue, page clock frozen at the evidence boundary so the panel cannot reset to `WAIT` mid-clip | panel bright-pixel share 0.56 % → 0.97 % → 1.21 % across the clip (the typing); `FLAG` row appears on cue 2 |
+| 5 | Clip 05: same as 04, and the product's own receipt design is unused | The clip transcribed two panel rows instead of showing the receipt | the clip is the receipt page itself (`/runproof/r/<id>`) with a live `RE-VERIFY NOW`, verdict typed on cue 2 | receipt page captured; `MATCH` verdict rendered from the live re-check |
+| 6 | Clip 06: display is right, audio missing | Same as 1 | same score, generated from its own cues | 11.50 s, 689 frames, audio present |
+
+**Series length is no longer uniform.** Clip 03 is **7.27 s** because the replay *is*
+its evidence, and the showcase starts a new take the moment that replay ends — a 15 s
+hold would have shown a `WAIT` panel for half the clip. Clip 04 is 14.80 s, 05 is
+14.97 s, 01 is 16.00 s, 02 is 15.00 s, 06 is 11.50 s. Geometry, frame rate, bar and
+palette are unchanged and identical across all six: `1280 × 800`, `60/1` CFR,
+958 / 899 / 435 / 886 / 897 / 689 frames.
+
+**What is not claimed.** The score is music generated from the cue timeline; it is not
+the engine's sound, and neither the thread nor the review packet calls it that. Clip
+04's frozen page clock is staging of a state the product had already produced, not a
+substitute for it — the panel content is the page's own DOM at that boundary.

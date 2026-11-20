@@ -57,6 +57,17 @@ Public origin for this build: **https://candle-climber-runtrace.vercel.app**
 - [x] `DONE` — Clips verified mechanically: constant 60 fps, 1280 × 800, caption
       present at every cue midpoint and absent before the first one
       ([video-production-standard.md](video-production-standard.md#7-production-record--2026-11-20-the-six-shipped-clips)).
+- [x] `DONE` — Second pass after the owner watched the six files (2026-11-20): each clip
+      now carries a synthesised score generated from its own cue file; the game camera
+      keeps the platform being jumped toward inside the frame (render camera v4 — the
+      death law is untouched, so a stored trace still replays to the same verdict); the
+      proof rows type in on their cue and stay inside the frame; clip 04 is spread over
+      the whole frame instead of being centred with an empty top; clip 05 is the
+      product's own receipt page, captured against the deployment, with a live
+      re-verification; clip 03 is 7.3 s because the replay is its evidence
+      ([video-production-standard.md](video-production-standard.md#8-production-record--2026-11-20-second-pass-owner-review)).
+      This changed the material digest, so any earlier verdict is void and the judge
+      step below starts again on the v3 digest.
 - [ ] `USER` — **Judge verdict before publication.** Appoint a judge who did not write
       the thread, send them [judge-review-packet.md](judge-review-packet.md), and record
       the signed verdict at the end of [review-panel.md](review-panel.md). The axis
