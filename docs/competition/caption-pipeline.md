@@ -62,11 +62,30 @@ The vocabulary is the problem: `HMAC`, `ACCEPT`, `FLAG`, `run token`, `attested`
 `deterministic replay`. ASR mangles exactly these, and a mis-transcribed verdict is
 a wrong claim about the product.
 
-## Open decision
+## Narration options
 
-The SRT is only meaningful if the clips carry narration. Two options:
+The SRT is only meaningful if the clips carry narration.
 
-- **Owner's voice** — most credible, makes the SRT real, satisfies the authenticity
-  lens. Costs one recording pass after the picture is locked.
-- **Silent clips** — burned-in text is then the whole caption; ship no SRT rather
-  than an empty one, and put the full transcript in the thread text.
+| Option | Cost | Risk |
+| --- | --- | --- |
+| **Owner records it** | one pass, ~2 min of speech | none; most credible with the authenticity lens |
+| **Cloned voice, local model** | sample + setup + re-rolls | see constraints below |
+| **Silent clips** | none | burned-in text is then the whole caption; ship no SRT rather than an empty one, and put the transcript in the thread text |
+
+### If cloning is used
+
+- **Engine:** Chatterbox (Resemble AI), MIT-licensed, zero-shot from ~10 s of
+  reference audio, and it embeds PerTh watermarking — the output is machine-identifiable
+  as synthetic. XTTS v2 (CPML, non-commercial) and F5-TTS (CC-BY-NC) are ruled out on
+  licence grounds.
+- **The sample is biometric data and this repository is public.** It must never be
+  committed, never placed under the repo tree, and must be deleted after use. Read its
+  path from an environment variable; keep it in `/tmp`.
+- **Hardware here:** 4 vCPU, 7 GB RAM, no GPU. Chatterbox documents 8 GB RAM as the
+  floor and is GPU-oriented, so CPU synthesis is slow and may need memory headroom.
+  Budget minutes per pass, plus re-rolls for mispronounced terms.
+- **Disclosure is mandatory:** one line in the thread stating the narration is
+  synthesized from the owner's own voice. Hiding it converts a technical detail into a
+  credibility risk once the watermark or the prosody gives it away.
+- **Pronunciation is the failure mode:** `HMAC`, `zkVerify`, `ACCEPT`, `FLAG`,
+  `run token`, `Groth16` — each needs a phonetic respelling and a listening check.
