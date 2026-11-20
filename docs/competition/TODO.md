@@ -68,6 +68,16 @@ Public origin for this build: **https://candle-climber-runtrace.vercel.app**
       ([video-production-standard.md](video-production-standard.md#8-production-record--2026-11-20-second-pass-owner-review)).
       This changed the material digest, so any earlier verdict is void and the judge
       step below starts again on the v3 digest.
+- [x] `DONE` — Fourth pass (2026-11-20): clip 05 re-captured against the public
+      deployment after an external review showed its RE-CHECK box reading `FLAG`
+      (`invalid_run_token`) under a caption that claims "same trace, same totals" — the
+      receipt had been signed by the local dev server. The clip now shows receipt
+      `2031a612-8bdc-4ce7-883b-982bdeb32c2a`, issued by the deployment at
+      2026-11-20 17:39:45 UTC, whose stored trace re-verifies `ACCEPT` there; terrain is
+      pinned to `ETHUSDT` so the receipt belongs to the same run as clips 01–04; the
+      master is 15.00 s / 900 frames
+      ([video-production-standard.md](video-production-standard.md#10-production-record--2026-11-20-fourth-pass-clip-05-re-captured)).
+      The material digest changed again, so the judge step starts on the v5 digest.
 - [ ] `USER` — **Judge verdict before publication.** Appoint a judge who did not write
       the thread, send them [judge-review-packet.md](judge-review-packet.md), and record
       the signed verdict at the end of [review-panel.md](review-panel.md). The axis

@@ -60,7 +60,7 @@ const CLIPS: Clip[] = [
     file: "clip-05-receipt",
     claim: "The receipt stores the trace and re-verifies.",
     captions: ["The receipt stores the trace itself.", "Reopen it: same trace, same totals."],
-    seconds: 12.83,
+    seconds: 15,
   },
   {
     n: "06",

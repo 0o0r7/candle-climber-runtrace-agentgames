@@ -169,9 +169,10 @@ change landed. Nothing here was re-decided on taste.
 **Series length is no longer uniform.** Clip 03 is **7.27 s** because the replay *is*
 its evidence, and the showcase starts a new take the moment that replay ends — a 15 s
 hold would have shown a `WAIT` panel for half the clip. Clip 04 is 14.80 s, 05 is
-12.80 s, 01 is 12.75 s, 02 is 14.98 s, 06 is 11.48 s (clip 01 re-cut in the third pass,
-below). Geometry, frame rate, bar and palette are unchanged and identical across all
-six: `1280 × 800`, `60/1` CFR, 765 / 899 / 435 / 886 / 768 / 689 frames.
+15.00 s, 01 is 12.75 s, 02 is 14.98 s, 06 is 11.48 s (clip 01 re-cut in the third pass
+and clip 05 re-captured in the fourth, §9 and §10). Geometry, frame rate, bar and
+palette are unchanged and identical across all six: `1280 × 800`, `60/1` CFR,
+765 / 899 / 435 / 886 / 900 / 689 frames.
 
 **What is not claimed.** The score is music generated from the cue timeline; it is not
 the engine's sound, and neither the thread nor the review packet calls it that. Clip
@@ -203,3 +204,43 @@ Measured on the re-cut file: `duration 12.750000`, `nb_read_frames 765` (`= 12.7
 shows a state the page leaves on its own, the hold ends at the boundary the capture
 script logs for that stage — a fixed 15–16 s hold is only valid for a state the page
 keeps.
+
+## 10. Production record — 2026-11-20, fourth pass (clip 05 re-captured)
+
+An external review re-checked the receipt every clip shows. Clip 05's master displayed
+receipt `5545fa55…`, which the **local dev server** had written into the shared store:
+re-posting its stored trace returned `ACCEPT` on `localhost:3000` and `FLAG` /
+`invalid_run_token` on the public deployment, so the clip's own re-check box read
+`FLAG · DIFFERS from the stored verdict` under a caption that says "same trace, same
+totals". The caption was true of the mechanism and false of the footage.
+
+**Cause.** A receipt is reproducible only on the deployment that signed its run token.
+The showcase signs with `RUN_TOKEN_SECRET` in production and with the local dev constant
+in the sandbox, and both write to the same Mongo store, so a dev-signed receipt reaches
+a production page and fails there.
+
+**Fix, and the three rules it adds.**
+
+1. *Capture on the deployment that has to verify the receipt.*
+   `CLIP_BASE_URL=https://candle-climber-runtrace.vercel.app bun .captures/capture.ts clip-05`.
+2. *Pin the terrain symbol.* The daily rotation had moved to `SOLUSDT`, so a plain
+   re-capture would have shown a receipt for a different run than clips 01–04.
+   `CLIP_CANDLES_SYMBOL=ETHUSDT` routes the page's own `/api/candles` request to the
+   deployment's signed ETHUSDT terrain, so the recorded run is the same
+   903-tick / 18-input / score-330 run as the rest of the series — now with a production
+   signature.
+3. *Cap the master at an exact length.* A 15 s hold recorded only 14.94 s of segment
+   (the screen recording drops its last frames when the context closes), and AAC priming
+   then cut the encode a frame short. The clip holds 20 s and is rendered with an
+   explicit cap — `sh .captures/render.sh clip-05-receipt clip-05 15` — with
+   `setpts=PTS-STARTPTS` rebasing the trimmed segment and no `-shortest` when a cap is
+   given.
+
+**Measured on the shipped file.** `duration 15.000000`, `nb_read_frames 900`
+(`= 15.00 × 60`), `1280 × 800`, `60/1`, `aac 48 kHz stereo 160 kb/s`. The receipt on
+screen is `2031a612-8bdc-4ce7-883b-982bdeb32c2a`, issued by the deployment at
+2026-11-20 17:39:45 UTC for `ETHUSDT · 2026-11-20`: `ACCEPT`, 903 fixed ticks, 18 input
+events, score 330, 25 candles passed, best streak 4, trace hash
+`b2edef3c8883c62976e05d93f41d0a74c282c27165398ca6a5f9813945de9989`. Re-posting that
+stored trace to `POST /api/runproof/verify` on the deployment returns `ACCEPT` with no
+issues, and the clip's own RE-CHECK block reads `ACCEPT · matches the stored verdict`.

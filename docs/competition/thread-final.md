@@ -112,7 +112,8 @@ The agent endpoint takes signed tasks only. An unsigned POST is rejected with 40
 ```text
 Play it: https://candle-climber-runtrace.vercel.app/play
 Console: https://candle-climber-runtrace.vercel.app/runproof
-Contract and build notes: the repository's docs/runproof/ and docs/competition/
+Repo: https://github.com/0o0r7/candle-climber-runtrace-agentgames
+Build notes: docs/runproof/ and docs/competition/ in that repo
 
 #AgentGames
 ```
@@ -159,19 +160,12 @@ Full-width console panel in the frame. SERVER REPLAY is tagged ACCEPT and lists 
 
 **clip 05 — receipt**
 
-> **Defect — clip 05 is not postable in its current master (2026-11-20, fourth pass).**
-> The re-check block on screen reads `FLAG · DIFFERS from the stored verdict` /
-> `invalid_run_token: The attached run token is not a valid server signature`, while
-> the caption says "same trace, same totals". The receipt it shows
-> (`5545fa55-d4c2-4c19-829c-39532469f232`) was written by the local dev server and
-> signed with the dev secret: re-posting its stored trace returns `ACCEPT` on
-> `localhost:3000` and `FLAG` / `invalid_run_token` on
-> `candle-climber-runtrace.vercel.app`. Re-render the clip against the deployment with
-> a receipt that verifies there, then replace the alt text below with the `MATCH`
-> state.
+Recorded against the public deployment on 2026-11-20; the receipt it shows
+(`2031a612-8bdc-4ce7-883b-982bdeb32c2a`) is that deployment's own record and re-checks
+`ACCEPT` there — the clip's RE-CHECK block reads `ACCEPT · matches the stored verdict`.
 
 ```text
-RunTrace receipt page in the app's white certificate layout on a dark background. TERRAIN AND IDENTITY lists market-binance · 219 candles, provenance "server-signed run token", trace hash 842cdc401918db84fb745c97a2b6cb524ea028ec092fc44cf032514641150433 and receipt id 5545fa55-d4c2-4c19-829c-39532469f232. EVIDENCE reads: replay completed 903 fixed ticks at 60 Hz; score 330, 25 candles passed, best streak 4; terrain ETHUSDT 2026-11-20 · 219 closed 1w candles. The RE-CHECK THIS RECEIPT block below it is tagged FLAG · DIFFERS from the stored verdict and carries invalid_run_token: The attached run token is not a valid server signature. Caption bar: "The receipt stores the trace itself."
+RunTrace receipt page in the app's white certificate layout on a dark background. Header: RUN RECEIPT, ETHUSDT · 2026-11-20, issued 2026-11-20 17:39:45 UTC, policy runproof/deterministic-replay/v1, stamp ACCEPT. TERRAIN AND IDENTITY lists market-binance · 219 candles, provenance "server-signed run token", trace hash b2edef3c8883c62976e05d93f41d0a74c282c27165398ca6a5f9813945de9989 and receipt id 2031a612-8bdc-4ce7-883b-982bdeb32c2a. EVIDENCE reads: replay completed 903 fixed ticks at 60 Hz; score 330, 25 candles passed, best streak 4; checked 18 input events against 219 supplied terrain candles; terrain matches the server-signed market level: ETHUSDT 2026-11-20 · 219 closed 1w candles. The RE-CHECK THIS RECEIPT block below it is tagged ACCEPT · matches the stored verdict and repeats the same four evidence lines. Caption bar: "The receipt stores the trace itself."
 ```
 
 **clip 06 — endpoint**

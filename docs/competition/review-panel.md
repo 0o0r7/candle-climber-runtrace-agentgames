@@ -150,3 +150,33 @@ supported. Cause: clip 01 held for `holdMs: 16_000`, longer than the take it rec
 **Gate status: lenses 1–5 `APPROVE` on material v4; the judge verdict is `PENDING` on the
 v4 digest.** The v3 digest is superseded — the clip 01 file changed — so
 `bun scripts/publish-gate.ts` exits `1` until a named judge signs the new hash.
+
+### 2026-11-20 — fourth pass: clip 05 re-captured against the deployment (material v5)
+
+Trigger: an external review of the shipped package (2026-11-20 17:35 UTC) re-checked
+every receipt the clips show. Clip 05's master displayed receipt
+`5545fa55-d4c2-4c19-829c-39532469f232`, written by the local dev server into the shared
+store; its own RE-CHECK box read `FLAG · DIFFERS from the stored verdict` with
+`invalid_run_token` on the public deployment, under a caption that says "same trace, same
+totals". The same numbers re-posted to `POST /api/runproof/verify` on
+`candle-climber-runtrace.vercel.app` reproduced the `FLAG`. This supersedes the lens-3
+`BLOCK` recorded in the produced-media pass above.
+
+| Lens | What it checked | Objection | Resolution | Verdict |
+| --- | --- | --- | --- | --- |
+| 1 X Distribution | Clip 05 is now **15.00 s / 900 frames**, 60 fps CFR, 1280 × 800; alt text rewritten to the state actually on screen (874 characters, under the 1000 ceiling); captions and SRT unchanged in wording | The clip grew from 12.83 s to 15.00 s | The caption timeline is now 900 ticks and the master is capped at exactly that length; the series stays inside 7.3–15.0 s | `APPROVE` |
+| 2 Technical Article | Reproduction for every step: `CLIP_BASE_URL=https://candle-climber-runtrace.vercel.app CLIP_CANDLES_SYMBOL=ETHUSDT bun .captures/capture.ts clip-05`, `sh .captures/render.sh clip-05-receipt clip-05 15`, `GET /api/runproof/runs/2031a612…`, `POST /api/runproof/verify` | — | — | `APPROVE` |
+| 3 Claim & Authenticity | The receipt on screen is `2031a612-8bdc-4ce7-883b-982bdeb32c2a`, issued by the deployment at 2026-11-20 17:39:45 UTC for `ETHUSDT · 2026-11-20`: `ACCEPT`, 903 fixed ticks, 18 input events, score 330, 25 candles, best streak 4, trace hash `b2edef3c…`. Re-posting its stored trace to the deployment returns `ACCEPT` with no issues; the clip's own re-check block reads `ACCEPT · matches the stored verdict` | A plain re-capture would have shown a `SOLUSDT` receipt — a different run from the one clips 01–04 show | Terrain pinned to the symbol the run was played on, so the receipt is the same 903-tick / score-330 run with a production signature; the dev-signed record was deleted from `candleclimber.runtrace_receipts`; frames measured at 15.00 s / 900 frames | `APPROVE` |
+| 4 zkVerify Protocol | No sentence about proof generation, submission or authorship changed; the receipt page's own banner still reads "DETERMINISTIC REPLAY · NO ZK PROOF" | — | — | `APPROVE` |
+| 5 Compliance | Media 1.30 MB, 15.00 s, captions burned in, SRT beside the file; deadline 2026-11-21 22:00 UTC still ahead | Filing still needs the owner's account | Listed in [TODO.md](TODO.md#4-creator-track) | `APPROVE` (filing pending owner) |
+| 6 Judge — **panel pre-score, not a verdict** | Four official axes on v5 | Pre-scores are not verdicts | Unchanged: technical substance **5**, clarity **4**, zkVerify relevance **3**, originality **4** | `PRE-SCORE` |
+
+Post 12 also gained the public repository address
+(`https://github.com/0o0r7/candle-climber-runtrace-agentgames`, 259 characters,
+`#AgentGames` kept), answering the review's non-blocking finding that "the repository"
+had no address a reader could open.
+
+**Gate status: lenses 1–5 `APPROVE` on material v5; the judge verdict is `PENDING` on the
+v5 digest.** The v4 digest is superseded — the clip 05 file, the thread alt text and post
+12 changed — so `bun scripts/publish-gate.ts` exits `1` until a named judge signs the new
+hash. Nothing is published on a superseded verdict.
