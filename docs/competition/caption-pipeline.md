@@ -101,14 +101,32 @@ The SRT is only meaningful if the clips carry narration.
 Audio may come from another agent or service. It is accepted only in this shape,
 because this is the only shape that can be verified:
 
-1. **One file per cue**, never one long take. `cue-<clipId>-<index>.wav`.
-2. **48 kHz mono WAV**, no loudness normalisation applied by the generator.
-3. **A manifest** `{ clipId, cue, text, durationMs, sampleRate }` per file, with the
-   text copied from `captions/<clip>.ts` — not retyped.
-4. Files live **outside the repo tree** (or under a gitignored `captures/audio/`).
-5. **The generating agent does not mux.** Assembly happens here, once.
+1. **One file per cue**, never one long take. `cue-<clipId>-<cue>.wav`.
+2. **Native sample rate of the engine, untouched.** The generator must not resample,
+   normalise, trim, or apply any DSP. A 24 kHz mono `pcm_s16le` file is accepted as-is:
+   the single conversion to the video's audio rate happens once, in the mux step, where
+   it is logged. Resampling at the source would add no information and would destroy
+   the `postProcessing: none` guarantee.
+3. **Two text fields, not one.** `captionText` is the on-screen text, copied verbatim
+   from `captions/<clip>.ts`. `speechText` is what was actually synthesised, which
+   differs wherever the pronunciation table applies. The check is a diff: `speechText`
+   must equal `captionText` with the documented respellings applied, and differ in
+   nothing else.
+4. **A manifest** per file: `{ clipId, cue, captionText, speechText, file, durationMs,
+   sampleRate, channels, engine, speed, leadingSilenceMs, postProcessing }`. When the
+   engine cannot report a backend model id, the field is `null` with a note saying so —
+   a capability fingerprint (`surface` + SDK version + voice preset) is the honest
+   substitute, never an invented id.
+5. Files live **outside the repo tree** (or under a gitignored `captures/audio/`).
+6. **The generating agent does not mux.** Assembly happens here, once.
 
-Assembly places each file at `leadInMs + tick/60*1000` and fails the build when a cue's
-`durationMs` overflows its caption window. That single check is what makes sync a
+Assembly places each file at `leadInMs + tick/60*1000 + leadingSilenceMs` — leading
+silence is **measured and compensated, never trimmed** — and fails the build when a
+cue's `durationMs` overflows its caption window. That check is what makes sync a
 property of the pipeline instead of a hope: a long take has no such check, and a final
 MP4 handed over already muxed has no check either.
+
+**Audio is an optional layer.** With no manifest present, every clip renders with
+burned-in captions and its SRT track and no audio at all. Narration is an enhancement
+to a finished entry, never a dependency of it — which is why an unresolved licence on
+the synthesis engine cannot block publication.
