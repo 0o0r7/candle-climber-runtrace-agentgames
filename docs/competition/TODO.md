@@ -78,3 +78,31 @@ The build must look like its own product — distinct from the original Candle C
 
 - [ ] `OPEN` — Keep the deployment online through judging; confirm receipts stay readable.
 - [ ] `OPEN` — Record judge feedback and any follow-up questions in this file.
+
+## 8. Quality upgrades — student benefits on hand
+
+GitHub Student Developer Pack and a verified AWS student account are available to
+the owner. These are the upgrades that raise the *evidence* a judge can check, not
+the decoration. Ordered by whether they fit before the deadline.
+
+Before publishing (hours, not days):
+
+- [ ] `OPEN` — **One-click reproducibility.** A `devcontainer.json` + Codespaces
+      link so a judge runs the six-case suite and gets the same verdicts without
+      cloning. This is the single strongest "technical substance" upgrade available.
+- [ ] `OPEN` — **Evidence artifacts in CI.** The 22-scenario suite already writes
+      `docs/evidence/agent-games-scenarios.json`; publish the run as a GitHub Actions
+      artifact and link the run in the thread, so the claim is checkable, not asserted.
+
+After the deadline (they improve the follow-up article, not the entry):
+
+- [ ] `OPEN` — **Immutable receipts on S3 Object Lock (WORM)** using student credits.
+      Receipts become tamper-evident at rest, not only in transit — and it is genuine
+      AWS substance, which is what an AWS Builder Center article needs to survive
+      moderation.
+- [ ] `OPEN` — **Second independent deployment** on DigitalOcean or Azure credit: same
+      trace, same verdict, different host. Portability is a real, testable claim;
+      "it works on my machine" is not.
+- [ ] `OPEN` — **Citable artifact.** Freeze the trace format spec and a small trace
+      corpus, mint a DOI (Zenodo), and cite it from the article. A judge can then cite
+      the entry; most entries cannot be cited.

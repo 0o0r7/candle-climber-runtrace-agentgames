@@ -32,8 +32,8 @@ We built an agent that plays the game and leaves a replayable trace instead. `#A
 
 **7/** Now the honest part, because this is where most "verifiable" claims break:
 
-- no zero-knowledge proof here;
-- terrain and inputs are caller-supplied and unauthenticated;
+- no zero-knowledge proof here — nothing is proven to anyone;
+- the terrain is server-signed (an HMAC token over the exact candles); the **inputs** are not — nothing attests who produced them;
 - the bot and its replay share one engine — this is a consistency check, not an independent physics oracle;
 - `PASS` covers the tested cases only.
 
@@ -45,7 +45,7 @@ We built an agent that plays the game and leaves a replayable trace instead. `#A
 Run the QA suite: `https://candle-climber-runtrace.vercel.app/runproof`
 Read the contract: repository `docs/runproof/`
 
-Built for `#AgentGames` by zkVerify — `@ZKVProtocol`
+Entry for `#AgentGames`. Tagging `@ZKVProtocol`.
 
 ## Video outline (alternative, 60–90 s)
 
@@ -55,9 +55,27 @@ Built for `#AgentGames` by zkVerify — `@ZKVProtocol`
 4. Say what it does not prove, on screen, in one sentence.
 5. Close on the endpoint URL and the repository link.
 
+## Accuracy ledger
+
+The precise statements behind the thread, each traceable to code. Every published
+sentence must reduce to one of these; anything else goes back to the panel.
+
+| Claim | Precise version | Source |
+| --- | --- | --- |
+| Terrain is authenticated | `GET /api/candles` signs `{symbol, date, count, interval, h}` where `h` is a 16-hex fingerprint of the exact candle JSON | `src/lib/run-token.ts` |
+| The verifier checks it | `attestTerrainIfPresent` recomputes the fingerprint when a trace carries a token; a mismatch is `invalid` with a reason | `src/game/runproof/attest.ts` |
+| Receipts require it | `attestTerrain` treats a missing token as `missing_run_token` — no receipt without a server-signed level | `src/game/runproof/attest.ts` |
+| The scored path enforces it | `POST /api/leaderboard` rejects an invalid token with `403` | `src/app/api/leaderboard/route.ts` |
+| Production fails closed | No `RUN_TOKEN_SECRET` on a production deploy ⇒ no tokens signed, all tokens rejected | `src/lib/run-token.ts` |
+| Inputs are **not** attested | The input stream arrives from the caller; a terrain token says nothing about who played | whole replay path |
+| The replay endpoint is unscored | `POST /api/runproof/verify` returns a consistency report; it is not an admission gate | `src/app/api/runproof/verify/route.ts` |
+
 ## Accuracy rules for this track
 
 - Never describe the build as producing zk proofs or submitting to zkVerify.
 - Never describe the replay as anti-cheat, identity verification, or proof of human play.
+- Never say the terrain is unauthenticated: it is signed, and the only unattested part is the input stream.
+- Never attribute authorship to zkVerify; this is an entry in their event, not their product.
 - Never present synthetic fixtures as market data.
 - Keep `#AgentGames` in every post and `@ZKVProtocol` on X.
+- No entry is published without the panel's verdict: [review-panel.md](review-panel.md).
