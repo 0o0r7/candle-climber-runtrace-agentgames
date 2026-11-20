@@ -40,6 +40,25 @@ The game engine (`src/game/cc/`), the rendering layer, and the economy
 surfaces are the same code lineage. RunTrace sits on top of the engine and does
 not modify gameplay; the engine's behaviour is what the replay verifier checks.
 
+## Authorship
+
+Two coding agents, two scopes. Stating this precisely matters: the entry is judged
+by people, and an inflated authorship claim is the easiest claim to disprove.
+
+| Scope | Produced by |
+| --- | --- |
+| The initial Candle Climber game code | a separate coding agent (Super Z, Base 1 model, Base44.com) |
+| This repository and this build — RunTrace, the verification layer, the tests, the docs, the receipt console | Base44 BaseCode |
+
+What follows from it:
+
+- The entry is **not** a claim of sole human authorship, and it is not a claim that
+  this build was written by the other agent either.
+- Content states this in one line rather than omitting it. An agent-written engine
+  with a human-directed verification layer is the subject of the competition, not a
+  weakness in it.
+- Any sentence of the form "I built X" must name which scope it covers.
+
 ## Changing the address
 
 Set `NEXT_PUBLIC_SITE_URL` on the deployment to the canonical origin (no

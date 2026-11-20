@@ -38,6 +38,7 @@ The official page judges four things. The Judge scores each 1–5 and requires
 - [ ] Every sentence reduces to a row of the [accuracy ledger](creator-track.md#accuracy-ledger).
 - [ ] Media within limits: ≤ 140 s, ≤ 512 MB, captions burned in, alt text written.
 - [ ] `#AgentGames` in every post, `@ZKVProtocol` tagged on X.
+- [ ] Authorship disclosed per [PRODUCT-IDENTITY.md](../PRODUCT-IDENTITY.md#authorship): the initial game code and this repository have different authors, and the entry says so.
 - [ ] Entry filed via `/dashboard/submissions` and a copy archived in the repository.
 
 ## Verdict ledger

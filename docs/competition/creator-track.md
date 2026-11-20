@@ -69,6 +69,7 @@ sentence must reduce to one of these; anything else goes back to the panel.
 | Production fails closed | No `RUN_TOKEN_SECRET` on a production deploy ⇒ no tokens signed, all tokens rejected | `src/lib/run-token.ts` |
 | Inputs are **not** attested | The input stream arrives from the caller; a terrain token says nothing about who played | whole replay path |
 | The replay endpoint is unscored | `POST /api/runproof/verify` returns a consistency report; it is not an admission gate | `src/app/api/runproof/verify/route.ts` |
+| Authorship is split | The initial game code came from a separate coding agent (Super Z, Base 1, Base44.com); this repository and this build were produced with Base44 BaseCode | [../PRODUCT-IDENTITY.md](../PRODUCT-IDENTITY.md#authorship) |
 
 ## Accuracy rules for this track
 
@@ -76,6 +77,7 @@ sentence must reduce to one of these; anything else goes back to the panel.
 - Never describe the replay as anti-cheat, identity verification, or proof of human play.
 - Never say the terrain is unauthenticated: it is signed, and the only unattested part is the input stream.
 - Never attribute authorship to zkVerify; this is an entry in their event, not their product.
+- Never claim sole authorship: the initial game code came from a separate coding agent, this repository from Base44 BaseCode. Name the scope, or say both in one line.
 - Never present synthetic fixtures as market data.
 - Keep `#AgentGames` in every post and `@ZKVProtocol` on X.
 - No entry is published without the panel's verdict: [review-panel.md](review-panel.md).
