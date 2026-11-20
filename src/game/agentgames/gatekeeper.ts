@@ -12,18 +12,24 @@
 //                         public_balance, expiry_block, current_block,
 //                         recipient, condition_recipient, amount,
 //                         max_transfer, proof_tx? } }
-//   response { "decision": "APPROVE" | "REJECT", "reason_code": "<code>" }
+//   response { "decision": "APPROVE" | "REJECT", "reason_code": "<code>",
+//              "proof"?: <groth16>, "public_signals"?: string[] }
 //
-// Decision-only responses are valid (the Groth16 proof is optional and its
-// absence is scored −2); this deployment does not run proving in the serverless
-// route. Malformed tasks fail closed as a signed HTTP 200 REJECT with the
-// extension reason code MALFORMED_TASK — never a non-2xx, which the platform
-// would score as a forfeit.
+// Responses carry a locally-verified Groth16 proof of the decision whenever the
+// proving pipeline (proving/prover.ts, official artifacts) succeeds within the
+// deadline budget; any failure keeps the decision-only shape, which scores
+// exactly the same as before (a missing proof costs −2 on provable tasks but a
+// failed proof costs the same, so attaching is never worse). Malformed tasks
+// fail closed as a signed HTTP 200 REJECT with the extension reason code
+// MALFORMED_TASK — never a non-2xx, which the platform would score as a
+// forfeit.
 //
 // The proof-reuse ledger is per process (in-memory). Serverless instances
 // recycle, so reuse detection across tasks is best-effort here — the same
 // trade-off the standalone agent makes when JOURNAL_PATH is unset.
 import { createHash } from "node:crypto";
+import type { Groth16Proof } from "snarkjs";
+import { proveGatekeeperDecision, proveBudgetMs } from "./proving/prover";
 
 export const GATEKEEPER_TASK_TYPE = "agent-games.proof-gatekeeper.v1" as const;
 
@@ -40,6 +46,12 @@ export type ReasonCode =
 export interface GatekeeperDecision {
   decision: "APPROVE" | "REJECT";
   reason_code: ReasonCode;
+}
+
+/** Response shape: the decision plus an optional locally-verified Groth16 proof. */
+export interface GatekeeperResponse extends GatekeeperDecision {
+  proof?: Groth16Proof;
+  public_signals?: string[];
 }
 
 interface NormalizedTask {
@@ -187,7 +199,8 @@ function fallbackTaskId(envelope: unknown): string {
  * is owned by the adapter instance (built once per serverless process together
  * with the HTTP handler, so it spans requests on that instance).
  */
-export function createGatekeeperTaskAdapter() {
+export function createGatekeeperTaskAdapter(opts?: { proving?: boolean }) {
+  const proving = opts?.proving ?? true;
   const approvedProofTx = new Map<string, string>();
   const ledger: ReuseLedger = { hasProofTx: (tx) => approvedProofTx.has(tx) };
   return {
@@ -201,11 +214,15 @@ export function createGatekeeperTaskAdapter() {
       }
       return fallbackTaskId(envelope);
     },
-    handle(envelope: unknown): GatekeeperDecision {
+    async handle(envelope: unknown): Promise<GatekeeperResponse> {
       let decision: GatekeeperDecision;
       let task: NormalizedTask | null = null;
+      let deadlineAt: string | null = null;
       try {
         task = normalizeTask(envelope);
+        deadlineAt = isRecord(envelope) && typeof envelope["deadline_at"] === "string"
+          ? (envelope["deadline_at"] as string)
+          : null;
         decision = decide(task, ledger);
       } catch (error) {
         if (error instanceof MalformedTaskError) {
@@ -216,6 +233,16 @@ export function createGatekeeperTaskAdapter() {
       }
       if (decision.decision === "APPROVE" && task?.proofTx) {
         approvedProofTx.set(task.proofTx, task.taskId);
+      }
+      // Provable-task proof: attempt only for well-formed tasks. Any non-ok
+      // proving result (witness disagreement, artifact failure, budget exceeded,
+      // failed local self-check) keeps the decision-only response. Tests pass
+      // { proving: false } to exercise the decision layer deterministically.
+      if (task !== null && proving) {
+        const result = await proveGatekeeperDecision(task, decision.decision, proveBudgetMs(deadlineAt));
+        if (result.status === "ok" && result.locallyVerified) {
+          return { ...decision, proof: result.proof, public_signals: result.publicSignals };
+        }
       }
       return decision;
     },

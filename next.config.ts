@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   // build:standalone` + `bun run start`). On Vercel the platform runtime is
   // used instead — keep the default output there.
   output: process.env.VERCEL ? undefined : "standalone",
+  // snarkjs must stay OUT of the webpack/turbopack bundle: it spawns
+  // worker_threads internally, which bundlers mangle. Keeping it external makes
+  // the serverless function require it from node_modules at runtime, exactly
+  // like plain Node (agentgames proving, 2026-11-20).
+  serverExternalPackages: ["snarkjs"],
   typescript: {
     // AUDIT F7: build must be authoritative for type safety (CI runs tsc too,
     // but a red build locally should stop the ship).

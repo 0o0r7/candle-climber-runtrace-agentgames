@@ -34,13 +34,14 @@ export function createRunProofTaskAdapter() {
 /**
  * Composite task adapter for the events this agent is registered for: the
  * Wildcard RunTrace verifier (local contract) plus the platform's Proof
- * Gatekeeper envelopes (agent-games.proof-gatekeeper.v1), which the registered
- * agent answers decision-only. Routing is by envelope type, so the two
- * contracts never collide.
+ * Gatekeeper envelopes (agent-games.proof-gatekeeper.v1), answered with the
+ * decision plus a locally-verified Groth16 proof when proving succeeds
+ * (decision-only on any proving failure). Routing is by envelope type, so the
+ * two contracts never collide.
  */
-export function createAgentGamesTaskAdapter() {
+export function createAgentGamesTaskAdapter(opts?: { proving?: boolean }) {
   const runproof = createRunProofTaskAdapter();
-  const gatekeeper = createGatekeeperTaskAdapter();
+  const gatekeeper = createGatekeeperTaskAdapter(opts);
   return {
     matches(envelope: unknown): boolean {
       return runproof.matches(envelope) || gatekeeper.matches(envelope);

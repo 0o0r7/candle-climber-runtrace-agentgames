@@ -20,6 +20,7 @@ import {
   encodeDisplayedSecretAsUtf8KeyForCompetitorEvidenceProfile,
 } from "@/game/agentgames/adapter";
 import { createAgentGamesTaskAdapter } from "@/game/agentgames/tasks";
+import { warmProver } from "@/game/agentgames/proving/prover";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,6 +36,11 @@ const handler = secret
       taskAdapter: createAgentGamesTaskAdapter(),
     })
   : null;
+
+// Cold-start warm-up: fetch the official circuit artifacts into /tmp and export
+// the verification key so the first gatekeeper task does not pay that cost.
+// Fire-and-forget — proving failures are fail-open (decision-only responses).
+void warmProver();
 
 export async function POST(request: Request) {
   if (!handler) {

@@ -1,0 +1,51 @@
+{
+  "$comment": "Input-signal NAMES and the witness layout were recovered from the official gatekeeper.wasm's embedded FNV input-signal map and empirically validated against the official zkey: witness calc succeeds/fails exactly along the documented trap rules and proofs verify locally. The circuit itself derives the decision and asserts the supplied one, so a wrong decision fails the witness calculation (the caller then omits the proof - fail-open). Semantic encodings of vk hashes / taskId / the output commitment remain UNCONFIRMED until the platform's re-verification is observed on a real scored task; until then a failed platform-side verification costs the same -2 as omitting the proof, so attaching is never worse than decision-only.",
+  "status": "SIGNALS-RECOVERED",
+  "discoveredFrom": "circuits/gatekeeper.wasm embedded input-signal map + snarkjs witness/probe on 2026-11-18",
+  "circuit": {
+    "wasmFile": "gatekeeper.wasm",
+    "zkeyFile": "gatekeeper_final.zkey",
+    "wasmSha256": "be00aefe3c8ba910951a242f50e55937bf82a0375ad4b69c2ef10629ab92764f",
+    "zkeySha256": "adfe95a439a7063a82a4967ef026d2dd6857a4d02c63b3caf63dac02e01af80d",
+    "nPublic": 13,
+    "observedPublicSignalsOrder": [
+      "output_commitment_varies_with_salt",
+      "registeredVkHash",
+      "proofVkHash",
+      "minimum",
+      "publicBalance",
+      "expiryBlock",
+      "currentBlock",
+      "recipient",
+      "conditionRecipient",
+      "amount",
+      "maxTransfer",
+      "decision",
+      "taskId"
+    ]
+  },
+  "inputs": {
+    "registeredVkHash": { "source": "registered_vk", "encoding": "hexHashTrunc31" },
+    "proofVkHash": { "source": "proof_vk", "encoding": "hexHashTrunc31" },
+    "minimum": { "source": "minimum", "encoding": "uint" },
+    "publicBalance": { "source": "public_balance", "encoding": "uint" },
+    "expiryBlock": { "source": "expiry_block", "encoding": "uint" },
+    "currentBlock": { "source": "current_block", "encoding": "uint" },
+    "recipient": { "source": "recipient", "encoding": "address" },
+    "conditionRecipient": { "source": "condition_recipient", "encoding": "address" },
+    "amount": { "source": "amount", "encoding": "uint" },
+    "maxTransfer": { "source": "max_transfer", "encoding": "uint" },
+    "decision": { "source": "decision", "encoding": "decisionEnum" },
+    "taskId": { "source": "task_id", "encoding": "sha256First31" },
+    "salt": { "source": "salt", "encoding": "randomSalt" }
+  },
+  "decisionEncoding": { "APPROVE": 1, "REJECT": 0 },
+  "circuitChecksEmpiricallyAsserted": [
+    "registeredVkHash == proofVkHash",
+    "publicBalance >= minimum",
+    "recipient == conditionRecipient",
+    "amount <= maxTransfer",
+    "currentBlock < expiryBlock",
+    "decision == derived rule outcome (cannot be chosen freely)"
+  ]
+}
