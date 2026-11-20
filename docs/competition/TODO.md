@@ -57,6 +57,13 @@ Public origin for this build: **https://candle-climber-runtrace.vercel.app**
 - [x] `DONE` — Clips verified mechanically: constant 60 fps, 1280 × 800, caption
       present at every cue midpoint and absent before the first one
       ([video-production-standard.md](video-production-standard.md#7-production-record--2026-11-20-the-six-shipped-clips)).
+- [ ] `USER` — **Judge verdict before publication.** Appoint a judge who did not write
+      the thread, send them [judge-review-packet.md](judge-review-packet.md), and record
+      the signed verdict at the end of [review-panel.md](review-panel.md). The axis
+      scores already in the panel are a pre-score, not a verdict. Publishing before the
+      verdict exists is the one sequence that cannot be repaired afterwards.
+- [ ] `OPEN` — `bun scripts/publish-gate.ts` exits `0` against the frozen material
+      (run it immediately before posting; any edit to the thread or a clip voids it).
 - [ ] `USER` — Publish the thread from the owner's X account, attaching the six clips
       in the order in the thread file and pasting the alt text.
 - [ ] `USER` — File the published link from `/dashboard/submissions` before
@@ -87,7 +94,9 @@ The build must look like its own product — distinct from the original Candle C
 ## 7. Post-submission
 
 - [ ] `OPEN` — Keep the deployment online through judging; confirm receipts stay readable.
-- [ ] `OPEN` — Record judge feedback and any follow-up questions in this file.
+- [ ] `OPEN` — Record the organizers' feedback and any follow-up questions in this file.
+      This is post-publication judging; it is separate from the pre-publication verdict,
+      which is a gate and must already be in [review-panel.md](review-panel.md).
 
 ## 8. Quality upgrades — student benefits on hand
 

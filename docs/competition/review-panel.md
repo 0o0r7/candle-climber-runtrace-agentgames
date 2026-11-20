@@ -1,9 +1,16 @@
 # Content review panel — Creator Track
 
 Purpose: no Creator-track material is published until **every lens returns
-`APPROVE`** and the **Judge** signs the assembled entry. A lens holds a veto
-only inside its own scope; the Judge is the single gate that can override a
-lens, and only by writing the reason into the ledger below.
+`APPROVE`** and a **named judge signs a verdict on the frozen material**. A lens
+holds a veto only inside its own scope; the judge is the single gate that can
+override a lens, and only by writing the reason into the ledger below.
+
+**Order matters.** The verdict is issued *before* the thread goes live. Once it is
+published, the entry is judged on what was live, so a verdict written afterwards
+changes nothing — it is a formality, not a decision. The order is enforced
+mechanically: `bun scripts/publish-gate.ts` exits `1` unless a signed verdict exists
+for the current thread text and clip set. Review packet, rubric and verdict form:
+[judge-review-packet.md](judge-review-packet.md).
 
 Deadline: **2026-11-21, 22:00 UTC**. Material not past the gate by then is not
 submitted — a veto is cheaper than a rejected entry.
@@ -19,6 +26,10 @@ submitted — a veto is cheaper than a rejected entry.
 | 5 | **Compliance & Deadline Marshal** | — (new) | Is the entry valid, on time, and filed? | Publishing after the deadline, entry not filed via `/dashboard/submissions`, required tag absent, no archived copy of the published entry |
 | 6 | **Judge** | — (new) | Does the assembled entry earn a place? | Anything the four official judging axes do not support; overrides a lens only with a written reason |
 
+The judge is a **named person who did not write the thread**, not a lens the author
+runs on themselves. Lenses 1–5 prepare the reading; only the judge's signature
+counts as a verdict, and it must be on record before publication.
+
 ## What the Judge weighs
 
 The official page judges four things. The Judge scores each 1–5 and requires
@@ -31,10 +42,23 @@ The official page judges four things. The Judge scores each 1–5 and requires
 | zkVerify relevance | Framing replay consistency as the precondition for any proof about a run | Claiming an integration this build does not have |
 | Originality | The negative space: what the verdict does *not* prove, stated by the builder | Generic "what is a ZK proof" explainer |
 
-## Publish gate
+## Publish gate — in this order
+
+1. **Freeze the material.** The thread text and the six clips stop changing.
+2. **Lenses.** Every lens `APPROVE`, recorded below with the evidence it checked.
+3. **Verdict.** A named judge signs `APPROVE` on the frozen material, with the four
+   axis scores and the material digest, using the form in
+   [judge-review-packet.md](judge-review-packet.md#verdict-form).
+4. **Gate.** `bun scripts/publish-gate.ts` exits `0` against that same material.
+5. **Publish.** The thread goes live, unchanged.
+6. **Archive.** The live thread is archived with its publish timestamp, which must be
+   later than `REVIEWED-AT`.
+
+Nothing is published during steps 1–4. A verdict obtained after step 5 is worthless.
 
 - [ ] Every lens `APPROVE`, recorded below with the evidence it checked.
-- [ ] Judge `APPROVE`, with the four axis scores written down.
+- [ ] Named judge `APPROVE`, with the four axis scores and `MATERIAL-SHA256` recorded.
+- [ ] `bun scripts/publish-gate.ts` exits `0` immediately before posting.
 - [ ] Every sentence reduces to a row of the [accuracy ledger](creator-track.md#accuracy-ledger).
 - [ ] Media within limits: ≤ 140 s, ≤ 512 MB, captions burned in, alt text written.
 - [ ] `#AgentGames` in every post, `@ZKVProtocol` tagged on X.
@@ -71,8 +95,11 @@ Material reviewed: six clips in `media/`, the thirteen-post thread in
 | 3 Claim & Authenticity | Every caption reduces to a ledger row; the numbers on screen are the run's own; bar contrast passes the validator; the `401` in clip 06 is a live response from the public deployment | **Found in production**: the first cut of clip 05 showed a receipt written by the local dev server into the shared store, and that receipt re-verified as `FLAG` on the public deployment because the run token was signed with the dev secret | Clip 05 re-captured against the public deployment; the dev-signed record deleted from `candleclimber.runtrace_receipts`; the shipped receipt `ea717213-7750-41f5-a003-6993a8eedbad` re-verified `ACCEPT` by re-posting its stored trace | `APPROVE` |
 | 4 zkVerify Protocol | No sentence claims proof generation, a zkVerify submission, or zkVerify authorship; the product's own banner says "DETERMINISTIC REPLAY · NO ZK PROOF"; authorship is attributed to Super Z and Base44 BaseCode | — | — | `APPROVE` |
 | 5 Compliance | Deadline 2026-11-21 22:00 UTC; media 11.5–16 s per clip, 0.25–1.3 MB, well inside 140 s / 512 MB; captions burned in; alt text ready | The entry is **not filed**: publishing the thread and filing from `/dashboard/submissions` need the owner's account | Material is submission-ready; the two owner steps are listed in [TODO.md](TODO.md) | `APPROVE` (filing pending owner) |
-| 6 Judge | Four official axes, 1–5, no axis below 3, technical substance ≥ 4 | — | Technical substance **5** (fixed-tick recording, fresh-instance replay, signed terrain, a deterministic verifier with reasons, each demonstrated on screen); Clarity **4** (one claim per post, limits stated in the same breath); zkVerify relevance **3** (the build does not use the protocol; the thread claims only that replay consistency is its precondition); Originality **4** (the negative space, stated by the builder) | `APPROVE` |
+| 6 Judge — **panel pre-score, not a verdict** | Four official axes, 1–5, no axis below 3, technical substance ≥ 4 | The scores in the next column are the author's own rehearsal of the judge's reading, not a verdict | Technical substance **5** (fixed-tick recording, fresh-instance replay, signed terrain, a deterministic verifier with reasons, each demonstrated on screen); Clarity **4** (one claim per post, limits stated in the same breath); zkVerify relevance **3** (the build does not use the protocol; the thread claims only that replay consistency is its precondition); Originality **4** (the negative space, stated by the builder) | `PRE-SCORE` |
 
-**Gate status: all six lenses `APPROVE` on the material.** Two steps remain and both
-need the owner's account: publish the thread from X, then file the link from
-`/dashboard/submissions`. Until the entry is filed, the submission is not complete.
+**Gate status: lenses 1–5 `APPROVE` on the material; the axis scores are a panel
+pre-score, not a verdict.** Publishing is blocked until a named judge signs a verdict
+on this exact material — `bun scripts/publish-gate.ts` must exit `0` — and only then
+is the thread published unchanged, archived with its timestamp, and its link filed
+from `/dashboard/submissions`. Steps and owners: [TODO.md](TODO.md#4-creator-track).
+Until the entry is filed, the submission is not complete.

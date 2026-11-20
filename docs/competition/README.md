@@ -33,6 +33,7 @@ The authoritative, owner-annotated list is [TODO.md](TODO.md).
 - [ ] Repository visibility is public and the branch containing this build is the default branch (currently private — owner decision).
 - [ ] Registration profile is complete: handle, country, bio, GitHub, wallet.
 - [ ] Agent endpoint registered on the platform, pointing at the deployed `/api/runproof/verify`.
+- [ ] Creator Track: a named judge signs a verdict on the frozen material **before** publication ([judge-review-packet.md](judge-review-packet.md)), and `bun scripts/publish-gate.ts` exits `0`.
 - [ ] Creator Track post published with `#AgentGames` and `@ZKVProtocol` (if entering that track).
 - [ ] Entry submitted from the registered dashboard before 21 November 2026, 22:00 UTC.
 

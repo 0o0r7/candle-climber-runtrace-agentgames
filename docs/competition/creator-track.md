@@ -94,4 +94,4 @@ sentence must reduce to one of these; anything else goes back to the panel.
 - Never claim sole authorship: the initial game code came from a separate coding agent, this repository from Base44 BaseCode. Name the scope, or say both in one line.
 - Never present synthetic fixtures as market data.
 - Keep `#AgentGames` in every post and `@ZKVProtocol` on X.
-- No entry is published without the panel's verdict: [review-panel.md](review-panel.md).
+- No entry is published before a named judge has signed a verdict on the frozen material: [judge-review-packet.md](judge-review-packet.md), recorded in [review-panel.md](review-panel.md), with `bun scripts/publish-gate.ts` exiting `0`. A verdict issued after publication is worthless.

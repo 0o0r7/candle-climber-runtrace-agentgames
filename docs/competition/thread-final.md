@@ -4,6 +4,10 @@ The entry as it ships: one X thread, thirteen posts, six clips. Every sentence
 below reduces to a row of the [accuracy ledger](creator-track.md#accuracy-ledger);
 every clip is a screen capture of the running product, not a mock-up.
 
+- **Before publishing:** a named judge signs a verdict on this exact material and
+  `bun scripts/publish-gate.ts` exits `0`. The verdict comes first — after the thread
+  is live it cannot change a word of it. Packet and verdict form:
+  [judge-review-packet.md](judge-review-packet.md).
 - **Format:** X thread, published from the owner's account.
 - **Required tags:** `#AgentGames` in every post; `@ZKVProtocol` in the closing post.
 - **Deadline:** 2026-11-21, 22:00 UTC. File the published link from `/dashboard/submissions`.
@@ -167,8 +171,10 @@ Terminal card on a dark background. The command "curl -i -X POST https://candle-
 
 ## Publishing checklist
 
+- [ ] Judge verdict signed on this material and `bun scripts/publish-gate.ts` exits `0`
+      (run it immediately before posting — any edit voids the verdict).
 - [ ] Six clips attached in the order of the map above, alt text pasted.
-- [ ] `#AgentGames` present in posts 1–11 and 13.
+- [ ] `#AgentGames` present in every post.
 - [ ] `@ZKVProtocol` tagged in post 13.
 - [ ] Thread published from the owner's account; the URL copied into
       [TODO.md](TODO.md) and filed from `/dashboard/submissions`.
