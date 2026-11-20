@@ -1,0 +1,7 @@
+1
+00:00:00,500 --> 00:00:07,500
+Real input from a deterministic bot.
+
+2
+00:00:07,500 --> 00:00:15,500
+Every press stamped at the 60 Hz tick.

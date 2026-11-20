@@ -1,0 +1,7 @@
+1
+00:00:00,500 --> 00:00:07,500
+The level is signed: an HMAC run token.
+
+2
+00:00:07,500 --> 00:00:14,500
+Candles are fingerprinted, not trusted.

@@ -1,0 +1,7 @@
+1
+00:00:00,300 --> 00:00:03,600
+A fresh engine replays the trace.
+
+2
+00:00:03,600 --> 00:00:06,900
+Score, jumps, landings must match.

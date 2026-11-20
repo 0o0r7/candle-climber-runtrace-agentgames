@@ -1,0 +1,7 @@
+1
+00:00:00,500 --> 00:00:07,500
+Add one point to the claim.
+
+2
+00:00:07,500 --> 00:00:14,500
+The replay returns FLAG: score_mismatch.
