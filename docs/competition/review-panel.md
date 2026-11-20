@@ -116,14 +116,37 @@ changed, so every lens was re-run on the changed parts only.
 
 | Lens | What it checked | Objection | Resolution | Verdict |
 | --- | --- | --- | --- | --- |
-| 1 X Distribution | Durations now 7.3 s / 12.8 s / 14.8 s / 15.0 s / 16.0 s / 11.5 s; one claim per clip; captions and alt text unchanged; nothing exceeds 140 s | Clip 03 is now half the length of the others, which reads as an outlier in a series | The reason is on the record and stated in the thread: the replay *is* its evidence, and the showcase starts a new take the moment it ends. No padding was added to match | `APPROVE` |
+| 1 X Distribution | Durations now 7.3 s / 12.75 s / 12.83 s / 14.8 s / 15.0 s / 11.5 s; one claim per clip; captions and alt text unchanged; nothing exceeds 140 s | Clip 03 is now half the length of the others, which reads as an outlier in a series | The reason is on the record and stated in the thread: the replay *is* its evidence, and the showcase starts a new take the moment it ends. No padding was added to match | `APPROVE` |
 | 2 Technical Article | Reproduction for every change: `test/camera-framing.test.ts`, `scripts/clip-audio.ts`, and the capture/render commands recorded in §8 | — | — | `APPROVE` |
 | 3 Claim & Authenticity | The score is disclosed as a score in three places (visual spec, standard §8, review packet); the engine's own `sfx` is never claimed; clip 05 now shows the production receipt `5545fa55-d4c2-4c19-829c-39532469f232`, read back from `https://candle-climber-runtrace.vercel.app/api/runproof/runs/<id>` as `decision: "ACCEPT"`, `traceHash 842cdc40…` | The first cut of clip 05 in this pass was captured against the local dev server — the exact defect this lens caught in v2 | Re-captured against the public deployment; the receipt shown is the production record, and the clip shows its live re-check | `APPROVE` |
 | 4 zkVerify Protocol | No new sentence touches proof generation, submission, or authorship; the camera and audio changes add no protocol claim | — | — | `APPROVE` |
-| 5 Compliance | Media 0.79–1.74 MB, 7.3–16.0 s, captions burned in, SRT beside each file; deadline 2026-11-21 22:00 UTC still ahead | Filing still needs the owner's account | Listed in [TODO.md](TODO.md#4-creator-track) | `APPROVE` (filing pending owner) |
+| 5 Compliance | Media 0.76–1.40 MB, 7.3–15.0 s, captions burned in, SRT beside each file; deadline 2026-11-21 22:00 UTC still ahead | Filing still needs the owner's account | Listed in [TODO.md](TODO.md#4-creator-track) | `APPROVE` (filing pending owner) |
 | 6 Judge — **panel pre-score, not a verdict** | Four official axes on the new material | The v2 pre-score was taken on material that no longer exists | Unchanged: technical substance **5**, clarity **4**, zkVerify relevance **3**, originality **4** — the changes are presentation and framing, not new substance | `PRE-SCORE` |
 
 **Gate status: lenses 1–5 `APPROVE` on material v3; the judge verdict is `PENDING`
 and the v2 verdict — if one had been signed — is void, because the digest changed.**
 `bun scripts/publish-gate.ts` now exits `1` until a named judge signs the v3 digest, and
 that is the intended state: nothing is published on a superseded verdict.
+
+### 2026-11-20 — third pass: clip 01 was cut past the end of its take (material v4)
+
+Trigger: the owner watched clip 01 and reported that from roughly 12 s to the end the
+picture no longer matches the caption and the clip is cut wrong. Checked frame by frame
+with `ffmpeg` stills: the recording take ends at **tick 903, t ≈ 12.75 s**, and the
+showcase immediately switches the stage to `SAME RUN, REPLAYED BY THE ENGINE` with the
+counter reset to **tick 3**. The 16.00 s file therefore carried **3.2 s of the replay**
+under the caption "Every press stamped at the 60 Hz tick" — a claim the footage no longer
+supported. Cause: clip 01 held for `holdMs: 16_000`, longer than the take it records.
+
+| Lens | What it checked | Objection | Resolution | Verdict |
+| --- | --- | --- | --- | --- |
+| 1 X Distribution | Clip 01 re-cut to **12.75 s / 765 frames**, 60 fps CFR; series now 7.3–15.0 s; nothing exceeds 140 s | The clip is shorter than the 15 s of its siblings | The take is that long; padding it was the defect. Stated in §8 of the production standard | `APPROVE` |
+| 2 Technical Article | Cut at the last frame of the take (`tick 903`), score regenerated from the same cue file (`12.75 s`, 2 accents), SRT re-emitted from the same cues (`00:12.25` end) | — | — | `APPROVE` |
+| 3 Claim & Authenticity | Last frame of the new file still shows `INPUT AT 60 HZ · SCORE 330 · CANDLES 25 · TICK 903`; no replay frame survives in the clip | — | — | `APPROVE` |
+| 4 zkVerify Protocol | No sentence about proof generation, submission or authorship changed | — | — | `APPROVE` |
+| 5 Compliance | Media 0.76–1.40 MB, 7.3–15.0 s, captions burned in, SRT beside each file | Filing still needs the owner's account | Listed in [TODO.md](TODO.md#4-creator-track) | `APPROVE` (filing pending owner) |
+| 6 Judge — **panel pre-score, not a verdict** | Four official axes on v4 | Pre-scores are not verdicts | Unchanged: technical substance **5**, clarity **4**, zkVerify relevance **3**, originality **4** | `PRE-SCORE` |
+
+**Gate status: lenses 1–5 `APPROVE` on material v4; the judge verdict is `PENDING` on the
+v4 digest.** The v3 digest is superseded — the clip 01 file changed — so
+`bun scripts/publish-gate.ts` exits `1` until a named judge signs the new hash.

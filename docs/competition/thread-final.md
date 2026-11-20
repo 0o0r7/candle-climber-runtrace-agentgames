@@ -11,7 +11,7 @@ every clip is a screen capture of the running product, not a mock-up.
 - **Format:** X thread, published from the owner's account.
 - **Required tags:** `#AgentGames` in every post; `@ZKVProtocol` in the closing post.
 - **Deadline:** 2026-11-21, 22:00 UTC. File the published link from `/dashboard/submissions`.
-- **Media:** six clips, 7–16 s each (clip 03 is 7.3 s — the length of its replay), 1280 × 800, constant 60 fps, each with a synthesised score generated from its own cue timeline. The score is music, not the engine's sound; the caption bar still carries every claim on its own.
+- **Media:** six clips, 7–15 s each (clip 03 is 7.3 s — the length of its replay), 1280 × 800, constant 60 fps, each with a synthesised score generated from its own cue timeline. The score is music, not the engine's sound; the caption bar still carries every claim on its own.
   (see [clip-visual-spec.md](clip-visual-spec.md)). Files in `media/`, SRT tracks beside them.
 - **Alt text:** written per clip below; paste it into X's alt field before posting.
 

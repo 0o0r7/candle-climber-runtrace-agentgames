@@ -169,11 +169,37 @@ change landed. Nothing here was re-decided on taste.
 **Series length is no longer uniform.** Clip 03 is **7.27 s** because the replay *is*
 its evidence, and the showcase starts a new take the moment that replay ends — a 15 s
 hold would have shown a `WAIT` panel for half the clip. Clip 04 is 14.80 s, 05 is
-14.97 s, 01 is 16.00 s, 02 is 15.00 s, 06 is 11.50 s. Geometry, frame rate, bar and
-palette are unchanged and identical across all six: `1280 × 800`, `60/1` CFR,
-958 / 899 / 435 / 886 / 897 / 689 frames.
+12.80 s, 01 is 12.75 s, 02 is 14.98 s, 06 is 11.48 s (clip 01 re-cut in the third pass,
+below). Geometry, frame rate, bar and palette are unchanged and identical across all
+six: `1280 × 800`, `60/1` CFR, 765 / 899 / 435 / 886 / 768 / 689 frames.
 
 **What is not claimed.** The score is music generated from the cue timeline; it is not
 the engine's sound, and neither the thread nor the review packet calls it that. Clip
 04's frozen page clock is staging of a state the product had already produced, not a
 substitute for it — the panel content is the page's own DOM at that boundary.
+
+## 9. Production record — 2026-11-20, third pass (clip 01 tail)
+
+The owner reported that clip 01 stops matching its caption around 12 s and is cut wrong.
+Stills extracted at 1 s and 0.1 s intervals locate the boundary exactly:
+
+| t | Stage shown | Counter |
+| --- | --- | --- |
+| 12.5 s | `INPUT AT 60 HZ` (recording) | score 330 · 25 candles · tick 891 |
+| 12.7 s | `INPUT AT 60 HZ` (recording) | score 330 · 25 candles · **tick 903** — last tick of the take |
+| 12.8 s | `SAME RUN, REPLAYED BY THE ENGINE` | score 0 · 0 candles · tick 3 |
+
+Clip 01 held for `holdMs: 16_000`, but the take it records lasts 12.75 s: the showcase
+starts the replay the moment the run ends, so the last 3.2 s of the file were the
+**replay** under a caption that claims recording. Fixed at the source (`holdMs: 12_800`)
+and in the shipped file: cut on the take's last frame, cue 2 closed at tick 735 so the
+SRT and the score (`12.75 s`, 2 accents) end with the footage.
+
+Measured on the re-cut file: `duration 12.750000`, `nb_read_frames 765` (`= 12.75 × 60`),
+`1280 × 800`, `60/1`, `aac 48 kHz stereo`; last frame still reads
+`INPUT AT 60 HZ · SCORE 330 · CANDLES 25 · TICK 903`; no replay frame survives.
+
+**The rule this adds.** A hold may not outlive the stage it is capturing. When a clip
+shows a state the page leaves on its own, the hold ends at the boundary the capture
+script logs for that stage — a fixed 15–16 s hold is only valid for a state the page
+keeps.

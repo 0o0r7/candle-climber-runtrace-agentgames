@@ -32,7 +32,7 @@ const CLIPS: Clip[] = [
     file: "clip-01-ticks",
     claim: "Input is recorded at the 60 Hz tick boundary.",
     captions: ["Real input from a deterministic bot.", "Every press stamped at the 60 Hz tick."],
-    seconds: 16,
+    seconds: 12.75,
   },
   {
     n: "02",
