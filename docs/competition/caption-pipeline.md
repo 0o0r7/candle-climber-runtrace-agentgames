@@ -89,3 +89,26 @@ The SRT is only meaningful if the clips carry narration.
   credibility risk once the watermark or the prosody gives it away.
 - **Pronunciation is the failure mode:** `HMAC`, `zkVerify`, `ACCEPT`, `FLAG`,
   `run token`, `Groth16` — each needs a phonetic respelling and a listening check.
+- **Better engine than a local model:** GLM-TTS (zai-org) does zero-shot cloning from
+  3–10 s and exposes phoneme-level control, which is exactly what the vocabulary above
+  needs. It is served through an OpenAI-compatible `POST /v1/audio/speech` with
+  `ref_audio` + `ref_text` — note that it needs the **transcript of the sample**, so the
+  reference read must be verbatim. Its licence is not stated on the model page: confirm
+  it before publishing.
+
+## Handoff contract for externally generated audio
+
+Audio may come from another agent or service. It is accepted only in this shape,
+because this is the only shape that can be verified:
+
+1. **One file per cue**, never one long take. `cue-<clipId>-<index>.wav`.
+2. **48 kHz mono WAV**, no loudness normalisation applied by the generator.
+3. **A manifest** `{ clipId, cue, text, durationMs, sampleRate }` per file, with the
+   text copied from `captions/<clip>.ts` — not retyped.
+4. Files live **outside the repo tree** (or under a gitignored `captures/audio/`).
+5. **The generating agent does not mux.** Assembly happens here, once.
+
+Assembly places each file at `leadInMs + tick/60*1000` and fails the build when a cue's
+`durationMs` overflows its caption window. That single check is what makes sync a
+property of the pipeline instead of a hope: a long take has no such check, and a final
+MP4 handed over already muxed has no check either.
