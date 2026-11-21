@@ -25,7 +25,7 @@ So a receipt cannot be moved to hand-edited terrain: the candles in the trace mu
 5. Store the receipt — reusing today's identical run when one already exists — then re-read it from the store and replay it again to show a `MATCH`.
 6. Loop the recorded trace through the real engine. The loop is a deterministic replay, not a video file.
 
-The page prints the "not claimed" boundary next to the evidence: no zero-knowledge proof, no zkVerify submission, no wallet identity. The autopilot is deterministic, so every visitor records the same run for the same signed terrain, and the loop is the replay of that run.
+The page prints the "not claimed" boundary next to the evidence: no zero-knowledge proof, no zkVerify submission, no wallet identity. The bundled gatekeeper prover is an experimental module that proves gatekeeper decisions locally — never verified on zkVerify. The autopilot is deterministic, so every visitor records the same run for the same signed terrain, and the loop is the replay of that run.
 
 ## Endpoints
 
@@ -72,7 +72,7 @@ The QA suite uses a deterministic fixture terrain (`src/game/runproof/qa-terrain
 
 ## What it does not prove
 
-- No zero-knowledge proof, no zkVerify submission, no wallet signature.
+- No zero-knowledge proof, no zkVerify submission, no wallet signature. The bundled gatekeeper prover is an experimental module, local-only, never verified on zkVerify.
 - Replay consistency only: it does not establish who produced the trace, and it does not bind a run to a wallet.
 - Input origin is unauthenticated. The token authenticates **terrain**, not the player.
 - The bot and its replay share one engine; the invariant layer is a bounded sanity check, not an independent physics oracle.

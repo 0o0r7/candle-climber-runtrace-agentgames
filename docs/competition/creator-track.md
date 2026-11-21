@@ -32,7 +32,7 @@ We built an agent that plays the game and leaves a replayable trace instead. `#A
 
 **7/** Now the honest part, because this is where most "verifiable" claims break:
 
-- no zero-knowledge proof here;
+- no zero-knowledge proof for RunTrace here (the bundled gatekeeper prover is an experimental module, local-only, never verified on zkVerify);
 - terrain and inputs are caller-supplied and unauthenticated;
 - the bot and its replay share one engine — this is a consistency check, not an independent physics oracle;
 - `PASS` covers the tested cases only.

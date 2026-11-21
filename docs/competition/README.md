@@ -8,7 +8,7 @@ This build is prepared for the [zkVerify Agent Games](https://agentgames.zkverif
 | --- | --- | --- |
 | **Wildcard** | **Primary** | Open until the deadline; panel-judged on usefulness, working implementation, and clarity. Matches what this build already is. |
 | **Creator Track** | **Secondary** | Same artifact, different format; content is judged manually. Low additional cost. |
-| Proof Gatekeeper | Not entered | Scored cumulatively over 8 daily rounds; requires its own circuit artifacts, HMAC endpoint, and per-task Groth16 proofs. |
+| Proof Gatekeeper | **Entered** (RunTrace) | Dashboard shows "Agent entered in Proof Gatekeeper = RunTrace"; the endpoint answers gatekeeper tasks (practice 4/4 correct) and attaches experimental local Groth16 proofs since commit 7f3706a. |
 | Steal the VFY | Not entered | Match window closed before this build was ready. |
 
 ## What is submitted

@@ -52,7 +52,7 @@ Status legend: `DONE` · `TODO` · `BLOCKED (user)` · `UNPUBLISHED`
 | A3.1 | Useful problem | "Show a clear need, who the agent helps, and why its work matters" | `DONE` — game QA / bug reproduction |
 | A3.2 | Working implementation visible | "Make it possible to understand what you built and see the agent in action" | `DONE` — live `/runproof/showcase`; the scenario suite records the same pipeline as evidence |
 | A3.3 | Clear explanation incl. limits | "Explain the workflow, key choices, and what the agent can and cannot do" | `DONE` — README "Limits" and the console's boundary panel |
-| A3.4 | Verifiability (optional plus) | "If zkVerify makes an important claim checkable, explain how it helps. Agents without zkVerify remain eligible." | `DONE` as an explicit non-claim; no zkVerify integration exists and none is advertised |
+| A3.4 | Verifiability (optional plus) | "If zkVerify makes an important claim checkable, explain how it helps. Agents without zkVerify remain eligible." | `DONE` as an explicit non-claim for RunTrace; no zkVerify integration exists and no proof is claimed as zkVerify-verified — the bundled gatekeeper prover is experimental, local-only, never verified on-chain |
 | A3.5 | Bonus: public share | "Just share your build publicly — what the agent is and a public demo" | `TODO` — publish the demo link |
 
 ### A4. Persistence (not a rule, a demo risk)
@@ -105,7 +105,7 @@ curl -s -o /dev/null -w '%{http_code}\n' "$BASE/runproof/showcase" # 200
 
 ```sh
 curl -s -X POST "$BASE/api/runproof/verify" -H 'Content-Type: application/json' -d '{}'
-# expect 400 with a validation error, proving the route is live and strict
+# expect 200 with decision "FLAG" and reason "Expected runproof/v1." — strict, never a crash
 
 curl -s "$BASE/api/candles" | head -c 300
 # expect seed + candles + runToken
@@ -188,3 +188,16 @@ These are recorded so they are not answered by assumption:
 1. **Does Wildcard dispatch signed tasks?** Rules §1.2 describes the agent protocol generally; the Wildcard page does not publish an envelope. The submission form (login-only) is the only place that can settle it. Mitigation: implement the signed path so both readings pass.
 2. **Is a registered platform agent required for Wildcard, or is a demo URL enough?** The page says "as requested in the submission form" — read the form before submitting.
 3. **Does a receipt link need to stay valid during judging?** Unpublished. Mitigation: durable store (A4.1).
+
+### Known limitations — documented, deliberately not implemented before the deadline
+
+State of HEAD (`7f3706a`) recorded 2026-11-21, so no surface implies more than the code does:
+
+| # | Limitation | Where | Public meaning |
+|---|---|---|---|
+| L1 | No on-chain zkVerifyJS/Kurier check. The decision uses payload fields only: `proof_vk` is compared to `registered_vk` as strings, and `proof_tx` is used only for reuse detection. | `src/game/agentgames/gatekeeper.ts:165-167`, `:179-181` | No response ever claims on-chain confirmation or a finalized job; build-guide step 04 ("wait for a finalized result") is not implemented. |
+| L2 | Reason codes are this build's names (`VK_SUBSTITUTION`, `THRESHOLD_MISMATCH`, `RECIPIENT_MISMATCH`, `AMOUNT_OVERFLOW`, `PROOF_REUSED`, `EXPIRED`, `VALID`, `MALFORMED_TASK`), not the published trap names (`VALID_CONDITION`, `EXPIRED_CONDITION`). | `src/game/agentgames/gatekeeper.ts:186-188` | Mapping risk accepted for the entered track; not aligned before a scored acceptance confirms the expected vocabulary. |
+| L3 | Task-id idempotency and the proof-reuse ledger are in-process Maps; serverless instance recycling loses them. | `src/game/agentgames/adapter.ts:110-112`, `src/game/agentgames/gatekeeper.ts:27-29` | Retries can re-execute; reuse detection is best-effort, as the code comments already state. |
+| L4 | `issued_at` / `deadline_at` freshness is not validated before deciding; the deadline only sizes the proving budget. | `src/game/agentgames/proving/prover.ts:230-240` | A task with a stale deadline is decided on its other fields, never on freshness. |
+| L5 | Proving latency has not been measured on the deployment under load. The budget is the task deadline minus safety headroom, capped at 9 s (`proveBudgetMs`); any failure or overrun falls back to the decision-only response. | `src/game/agentgames/proving/prover.ts:230-240`, `gatekeeper.ts:237-245` | Decision-only responses remain correct; a missing proof costs only the optional −2 component. |
+| L6 | `signal-mapping.json` encodings (VK hashes truncated to 31 bytes, taskId as sha256-first-31) are unconfirmed against the platform's re-verification. | `src/game/agentgames/proving/signal-mapping.json` | Kept "unconfirmed" until a real scored task accepts a locally produced proof; never upgraded to "verified" without an observed acceptance. |

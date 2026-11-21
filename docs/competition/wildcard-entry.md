@@ -86,7 +86,7 @@ receipt, and a verdict with latency for each scenario.
 
 Stated plainly, because the credibility of the build depends on it:
 
-- It produces **no** zero-knowledge proof and makes **no** zkVerify submission.
+- It produces **no** zero-knowledge proof and makes **no** zkVerify submission. (RunTrace scope: the bundled gatekeeper prover is an experimental module that proves gatekeeper decisions locally — never verified on zkVerify.)
 - It verifies **replay consistency**, not truth: a matching replay shows the inputs and terrain produce that outcome on this engine build — nothing about who submitted them.
 - Terrain is attested by a server-signed run token when present; **inputs remain caller-supplied** and unauthenticated, and no receipt identifies a player or wallet.
 - The autonomous QA suite runs on a **deterministic fixture terrain** so a regression is attributable to the code under test; player runs use the same real market candles as the game.

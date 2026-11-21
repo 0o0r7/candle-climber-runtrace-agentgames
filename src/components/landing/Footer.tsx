@@ -45,7 +45,8 @@ export default function Footer() {
         <p className="rl-footer-note">
           Built on the Candle Climber engine. This build claims deterministic replay and
           server-side verification — not a zero-knowledge proof, and not proof of human
-          play.
+          play. The bundled gatekeeper prover is an experimental module, local-only, never
+          verified on zkVerify.
         </p>
       </footer>
     </>

@@ -2146,7 +2146,7 @@ export default function GameCanvas() {
         <span aria-hidden>·</span>
         <a href="/terms">terms</a>
         <span aria-hidden>·</span>
-        <span>deterministic replay · no zk proof</span>
+        <span title="RunTrace verdict; the bundled gatekeeper prover is an experimental module, local-only, never verified on zkVerify">deterministic replay · no zk proof</span>
       </footer>
 
       {/* Sweep 4 (2026-10-14, D8): the Settings/Achievements triggers used to

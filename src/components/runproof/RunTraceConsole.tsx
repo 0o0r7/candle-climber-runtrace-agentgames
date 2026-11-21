@@ -665,7 +665,8 @@ export default function RunTraceConsole() {
             <h2 style={{ fontSize: 15, margin: "0 0 10px" }}>What a receipt proves</h2>
             <p style={{ color: "var(--rt-muted-2)", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
               That this input log, replayed on the server-signed market level, produces exactly the stored score, jumps, landings and
-              scoring events. It does not prove who played, does not identify a wallet, and creates no zero-knowledge proof. Terrain
+              scoring events. It does not prove who played, does not identify a wallet, and creates no zero-knowledge proof. The bundled
+              gatekeeper prover is an experimental module that proves gatekeeper decisions locally — never verified on zkVerify. Terrain
               with no run token is labeled unattested and cannot become a receipt.
             </p>
           </section>

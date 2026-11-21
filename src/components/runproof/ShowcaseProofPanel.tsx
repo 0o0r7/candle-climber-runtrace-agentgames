@@ -172,7 +172,7 @@ export default function ShowcaseProofPanel({ stage, proof }: { stage: ShowcaseSt
       <div style={{ borderTop: "1px solid var(--rt-panel-2)", marginTop: 10, paddingTop: 10 }}>
         <p style={{ color: "var(--rt-muted)", font: `700 10px ${MONO}`, letterSpacing: ".1em", margin: "0 0 6px" }}>NOT CLAIMED</p>
         <ul style={{ color: "var(--rt-muted)", fontSize: 11.5, lineHeight: 1.6, margin: 0, paddingLeft: 18 }}>
-          <li>No zero-knowledge proof and no zkVerify submission.</li>
+          <li>No zero-knowledge proof and no zkVerify submission. The bundled gatekeeper prover is an experimental module, local-only, never verified on zkVerify.</li>
           <li>Terrain is server-signed; player identity and input origin are not.</li>
           <li>Replay consistency only — a bounded sanity check, not an independent physics oracle.</li>
         </ul>

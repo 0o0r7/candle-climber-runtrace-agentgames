@@ -41,7 +41,7 @@ export default function ProtocolShell({
             </Link>
           ))}
         </nav>
-        <span className="rt-chip" title="Deterministic replay, not a zero-knowledge proof">
+        <span className="rt-chip" title="Deterministic replay, not a zero-knowledge proof (the bundled gatekeeper prover is an experimental module, local-only, never verified on zkVerify)">
           DETERMINISTIC REPLAY · NO ZK PROOF
         </span>
       </header>

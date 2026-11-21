@@ -170,8 +170,10 @@ These constraints are deliberate and are documented where the code lives
 ([`docs/runproof/README.md`](runproof/README.md)):
 
 - **No cryptographic proof.** No zk proof, no wallet signature, no zkVerify submission
-  in this build's verification path. zkVerify integration is documented as a v2
-  direction, and agents without zkVerify are eligible per the Wildcard page.
+  in this build's verification path. The bundled gatekeeper prover is an experimental
+  module that proves gatekeeper decisions locally — never verified on zkVerify, with no
+  finalized job or platform acceptance observed. zkVerify integration is documented as a
+  v2 direction, and agents without zkVerify are eligible per the Wildcard page.
 - **Terrain is attested; inputs are not.** The server-signed run token binds the trace
   to the terrain the server actually served; the input log itself is caller-supplied
   and its origin is not authenticated.

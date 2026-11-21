@@ -34,8 +34,9 @@ export default function PipelineSection() {
           <h2 className="rl-sec-title">How a run becomes a receipt.</h2>
         </div>
         <p className="rl-sec-note">
-          No zero-knowledge proof, and none claimed. What this build does is replay the
-          run and say what it found.
+          No zero-knowledge proof for RunTrace, and none claimed. What this build does is replay the
+          run and say what it found. The bundled gatekeeper prover is an experimental module that
+          proves gatekeeper decisions locally — never verified on zkVerify.
         </p>
       </div>
 

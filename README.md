@@ -14,10 +14,10 @@ This build is prepared as a **Wildcard entry for [zkVerify Agent Games](https://
 | --- | --- |
 | Live demo | <https://candle-climber-runtrace.vercel.app> |
 | Signed agent endpoint | `POST https://candle-climber-runtrace.vercel.app/api/agentgames` |
-| Production evidence | [`docs/evidence/agent-games-scenarios.json`](docs/evidence/agent-games-scenarios.json) — 22/22 scenarios, recorded against the deployment |
+| Production evidence | [`docs/evidence/agent-games-scenarios.json`](docs/evidence/agent-games-scenarios.json) — 22/22 scenarios, recorded against the deployment (runproof-only evidence, recorded 2026-11-19; predates the experimental gatekeeper prover, commit 7f3706a) |
 | Judges' guide | [`docs/JUDGES-GUIDE.md`](docs/JUDGES-GUIDE.md) — architecture, protocol, and the two-minute reproduction path |
 
-> **Scope.** This is a deterministic replay-consistency check implemented in TypeScript, not a zero-knowledge proof, not anti-cheat, and not identity verification. It answers one narrow question: *given these inputs and this terrain, does this engine build reproduce the recorded outcome?* See [Limits](#limits).
+> **Scope.** This is a deterministic replay-consistency check implemented in TypeScript, not a zero-knowledge proof, not anti-cheat, and not identity verification. It answers one narrow question: *given these inputs and this terrain, does this engine build reproduce the recorded outcome?* The bundled gatekeeper prover is an experimental module that proves gatekeeper decisions locally — never verified on zkVerify; no RunTrace claim is proven with it. See [Limits](#limits).
 
 ---
 
@@ -129,7 +129,7 @@ Each finding carries the seed, profile, ruleset, a descriptive local build ID, t
 
 These constraints are deliberate and stated up front:
 
-- **No cryptographic proof.** There is no zk proof, wallet signature, or zkVerify submission in this build's verification path.
+- **No cryptographic proof.** There is no zk proof, wallet signature, or zkVerify submission in this build's verification path. The bundled gatekeeper prover is an experimental module outside this path; its proofs are local-only and never verified on zkVerify.
 - **Terrain is attested, inputs are not.** Player runs use the day's real market candles and the server-signed run token binds the terrain; the input log itself is caller-supplied and its origin is not authenticated. The QA suite uses a deterministic fixture terrain on purpose.
 - **No identity claim.** A result never identifies or proves that a human played, and no receipt binds a run to a wallet.
 - **Same-engine replay.** The bot run and its replay use the same engine. The invariants are bounded sanity checks, not an independently implemented physics oracle.
