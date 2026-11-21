@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     siteName: "CANDLE CLIMBER — RUNTRACE",
     title,
     description,
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "CANDLE CLIMBER — the chart is the level" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "RunTrace — deterministic replay verification and signed run receipts" }],
   },
   twitter: {
     card: "summary_large_image",
