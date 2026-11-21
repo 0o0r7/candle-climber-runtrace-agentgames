@@ -103,7 +103,13 @@ export default function ClipsPage() {
               height={800}
               src={`${BASE}/${clip.file}.mp4`}
             >
-              <track kind="captions" src={`${BASE}/${clip.file}.srt`} srcLang="en" label="English" default />
+              {/*
+                No <track> here on purpose. The captions are already burned into the
+                frame below the game area, so attaching the SRT sidecar prints every
+                line twice (once in the frame, once in the player's caption overlay).
+                The SRT stays available as a separate download for platforms that
+                want a caption file instead of the burned-in text.
+              */}
             </video>
 
             <ul className="mt-2 space-y-0.5 font-mono text-xs text-white/50">
